@@ -193,6 +193,7 @@ class HabitCard extends StatefulWidget {
 
 class _HabitCardState extends State<HabitCard> {
   bool _isRunning = false;
+  bool _isExpanded = false;
   int _remainingSeconds = 300;
   int _totalDuration = 300; // 5 minutes in seconds
 
@@ -294,122 +295,146 @@ class _HabitCardState extends State<HabitCard> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.habit.name,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: widget.onDelete,
-                  color: Colors.red,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Circular progress indicator
-            Center(
-              child: Stack(
-                alignment: Alignment.center,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _isExpanded = !_isExpanded;
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SizedBox(
-                    width: 120,
-                    height: 120,
-                    child: CircularProgressIndicator(
-                      value: _getProgress(),
-                      strokeWidth: 8,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        _remainingSeconds > 0
-                            ? Colors.deepPurple
-                            : Colors.green,
-                      ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isExpanded ? Icons.expand_less : Icons.expand_more,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.habit.name,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    _formatTime(_remainingSeconds),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color:
-                          _remainingSeconds <= 60 && _isRunning
-                              ? Colors.red
-                              : Colors.black87,
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () {
+                      // Stop propagation by handling delete separately
+                      widget.onDelete();
+                    },
+                    color: Colors.red,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            // Timer controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (!_isRunning && _remainingSeconds == _totalDuration)
-                  ElevatedButton.icon(
-                    onPressed: _startTimer,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                  )
-                else if (_isRunning)
-                  ElevatedButton.icon(
-                    onPressed: _stopTimer,
-                    icon: const Icon(Icons.pause),
-                    label: const Text('Pause'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                  )
-                else
-                  Row(
+              if (_isExpanded) ...[
+                const SizedBox(height: 16),
+                // Circular progress indicator
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
+                      SizedBox(
+                        width: 120,
+                        height: 120,
+                        child: CircularProgressIndicator(
+                          value: _getProgress(),
+                          strokeWidth: 8,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _remainingSeconds > 0
+                                ? Colors.deepPurple
+                                : Colors.green,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _formatTime(_remainingSeconds),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color:
+                              _remainingSeconds <= 60 && _isRunning
+                                  ? Colors.red
+                                  : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Timer controls
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (!_isRunning && _remainingSeconds == _totalDuration)
                       ElevatedButton.icon(
                         onPressed: _startTimer,
                         icon: const Icon(Icons.play_arrow),
-                        label: const Text('Resume'),
+                        label: const Text('Start'),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 12,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: _resetTimer,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reset'),
-                        style: OutlinedButton.styleFrom(
+                      )
+                    else if (_isRunning)
+                      ElevatedButton.icon(
+                        onPressed: _stopTimer,
+                        icon: const Icon(Icons.pause),
+                        label: const Text('Pause'),
+                        style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 12,
                           ),
                         ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _startTimer,
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Resume'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: _resetTimer,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reset'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                  ],
+                ),
               ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

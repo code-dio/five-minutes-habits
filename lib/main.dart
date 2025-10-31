@@ -32,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Habit> _habits = [];
   final Map<String, TimerController> _timerControllers = {};
   final Map<String, int> _remainingSeconds = {};
+  final Map<String, int> _habitDurations =
+      {}; // Store duration in seconds for each habit
 
   @override
   void dispose() {
@@ -42,18 +44,22 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _addHabit(String name) {
+  void _addHabit(String name, int durationMinutes) {
     if (name.trim().isEmpty) return;
 
     final habit = Habit(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name.trim(),
       createdAt: DateTime.now(),
+      durationMinutes: durationMinutes,
     );
+
+    final durationSeconds = durationMinutes * 60;
 
     setState(() {
       _habits.add(habit);
-      _remainingSeconds[habit.id] = 300; // 5 minutes = 300 seconds
+      _remainingSeconds[habit.id] = durationSeconds;
+      _habitDurations[habit.id] = durationSeconds;
       _timerControllers[habit.id] = TimerController();
     });
   }
@@ -64,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _timerControllers[id]?.dispose();
       _timerControllers.remove(id);
       _remainingSeconds.remove(id);
+      _habitDurations.remove(id);
     });
   }
 
@@ -79,37 +86,90 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showAddHabitDialog() {
     final TextEditingController nameController = TextEditingController();
+    int selectedDuration = 5; // Default to 5 minutes
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Add New Habit'),
-          content: TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              hintText: 'Enter habit name',
-              border: OutlineInputBorder(),
-            ),
-            autofocus: true,
-            onSubmitted: (_) {
-              _addHabit(nameController.text);
-              Navigator.of(context).pop();
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _addHabit(nameController.text);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Add'),
-            ),
-          ],
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add New Habit'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter habit name',
+                        border: OutlineInputBorder(),
+                        labelText: 'Habit Name',
+                      ),
+                      autofocus: true,
+                      onSubmitted: (_) {
+                        if (nameController.text.trim().isNotEmpty) {
+                          _addHabit(
+                            nameController.text.trim(),
+                            selectedDuration,
+                          );
+                          Navigator.of(dialogContext).pop();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Duration:',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      value: selectedDuration,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Select Duration',
+                      ),
+                      items:
+                          [1, 2, 3, 4, 5].map((minutes) {
+                            return DropdownMenuItem<int>(
+                              value: minutes,
+                              child: Text(
+                                '$minutes minute${minutes > 1 ? 's' : ''}',
+                              ),
+                            );
+                          }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedDuration = value;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (nameController.text.trim().isNotEmpty) {
+                      _addHabit(nameController.text.trim(), selectedDuration);
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -160,6 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       habit: _habits[index],
                       timerController: _timerControllers[_habits[index].id]!,
                       remainingSeconds: _remainingSeconds[_habits[index].id]!,
+                      totalDuration: _habitDurations[_habits[index].id]!,
                       onDelete: () => _deleteHabit(_habits[index].id),
                       onTimeUpdate: (seconds) {
                         setState(() {
@@ -186,6 +247,7 @@ class HabitCard extends StatefulWidget {
   final Habit habit;
   final TimerController timerController;
   final int remainingSeconds;
+  final int totalDuration;
   final VoidCallback onDelete;
   final Function(int) onTimeUpdate;
 
@@ -194,6 +256,7 @@ class HabitCard extends StatefulWidget {
     required this.habit,
     required this.timerController,
     required this.remainingSeconds,
+    required this.totalDuration,
     required this.onDelete,
     required this.onTimeUpdate,
   });
@@ -205,13 +268,14 @@ class HabitCard extends StatefulWidget {
 class _HabitCardState extends State<HabitCard> {
   bool _isRunning = false;
   bool _isExpanded = false;
-  int _remainingSeconds = 300;
-  int _totalDuration = 300; // 5 minutes in seconds
+  late int _remainingSeconds;
+  late int _totalDuration;
 
   @override
   void initState() {
     super.initState();
     _remainingSeconds = widget.remainingSeconds;
+    _totalDuration = widget.totalDuration;
   }
 
   @override
@@ -219,6 +283,9 @@ class _HabitCardState extends State<HabitCard> {
     super.didUpdateWidget(oldWidget);
     if (widget.remainingSeconds != oldWidget.remainingSeconds) {
       _remainingSeconds = widget.remainingSeconds;
+    }
+    if (widget.totalDuration != oldWidget.totalDuration) {
+      _totalDuration = widget.totalDuration;
     }
   }
 

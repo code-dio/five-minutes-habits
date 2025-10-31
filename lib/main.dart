@@ -67,6 +67,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _reorderHabits(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final habit = _habits.removeAt(oldIndex);
+      _habits.insert(newIndex, habit);
+    });
+  }
+
   void _showAddHabitDialog() {
     final TextEditingController nameController = TextEditingController();
 
@@ -140,23 +150,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               )
-              : ListView.builder(
+              : ReorderableListView(
                 padding: const EdgeInsets.all(8),
-                itemCount: _habits.length,
-                itemBuilder: (context, index) {
-                  final habit = _habits[index];
-                  return HabitCard(
-                    habit: habit,
-                    timerController: _timerControllers[habit.id]!,
-                    remainingSeconds: _remainingSeconds[habit.id]!,
-                    onDelete: () => _deleteHabit(habit.id),
-                    onTimeUpdate: (seconds) {
-                      setState(() {
-                        _remainingSeconds[habit.id] = seconds;
-                      });
-                    },
-                  );
-                },
+                onReorder: _reorderHabits,
+                children: [
+                  for (int index = 0; index < _habits.length; index++)
+                    HabitCard(
+                      key: ValueKey(_habits[index].id),
+                      habit: _habits[index],
+                      timerController: _timerControllers[_habits[index].id]!,
+                      remainingSeconds: _remainingSeconds[_habits[index].id]!,
+                      onDelete: () => _deleteHabit(_habits[index].id),
+                      onTimeUpdate: (seconds) {
+                        setState(() {
+                          _remainingSeconds[_habits[index].id] = seconds;
+                        });
+                      },
+                    ),
+                ],
               ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddHabitDialog,
@@ -312,6 +323,8 @@ class _HabitCardState extends State<HabitCard> {
                   Expanded(
                     child: Row(
                       children: [
+                        Icon(Icons.drag_handle, color: Colors.grey[400]),
+                        const SizedBox(width: 8),
                         Icon(
                           _isExpanded ? Icons.expand_less : Icons.expand_more,
                           color: Colors.grey[600],

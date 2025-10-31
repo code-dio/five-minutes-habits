@@ -268,6 +268,7 @@ class HabitCard extends StatefulWidget {
 class _HabitCardState extends State<HabitCard> {
   bool _isRunning = false;
   bool _isExpanded = false;
+  bool _isCompleted = false;
   late int _remainingSeconds;
   late int _totalDuration;
 
@@ -287,6 +288,11 @@ class _HabitCardState extends State<HabitCard> {
     if (widget.totalDuration != oldWidget.totalDuration) {
       _totalDuration = widget.totalDuration;
     }
+    if (_remainingSeconds == 0) {
+      _isCompleted = true;
+    } else if (_remainingSeconds == _totalDuration) {
+      _isCompleted = false;
+    }
   }
 
   void _startTimer() {
@@ -294,6 +300,7 @@ class _HabitCardState extends State<HabitCard> {
 
     setState(() {
       _isRunning = true;
+      _isCompleted = false;
     });
 
     _tick();
@@ -309,6 +316,7 @@ class _HabitCardState extends State<HabitCard> {
     setState(() {
       _isRunning = false;
       _remainingSeconds = _totalDuration;
+      _isCompleted = false;
     });
     widget.onTimeUpdate(_remainingSeconds);
   }
@@ -326,6 +334,8 @@ class _HabitCardState extends State<HabitCard> {
 
           if (_remainingSeconds == 0) {
             _isRunning = false;
+            _isCompleted = true;
+            _isExpanded = false;
             _showCompletionDialog();
           } else {
             _tick();
@@ -348,9 +358,8 @@ class _HabitCardState extends State<HabitCard> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _resetTimer();
               },
-              child: const Text('Done'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -400,8 +409,21 @@ class _HabitCardState extends State<HabitCard> {
                         Expanded(
                           child: Text(
                             widget.habit.name,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              decoration:
+                                  _isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                              color:
+                                  _isCompleted
+                                      ? Colors.grey
+                                      : Theme.of(
+                                        context,
+                                      ).textTheme.titleLarge?.color,
+                            ),
                           ),
                         ),
                       ],

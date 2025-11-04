@@ -13,8 +13,29 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Five Minute Habits',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.light(
+          primary: const Color(0xFF00704A), // Starbucks Green
+          secondary: const Color(0xFF1C7549), // Accent Green
+          tertiary: const Color(0xFF35855D), // Light Green
+          surface: Colors.white,
+          background: const Color(0xFFF5F5F5), // Light gray background
+          error: Colors.red,
+          onPrimary: Colors.white,
+          onSecondary: Colors.white,
+          onSurface: Colors.black87,
+          onBackground: Colors.black87,
+          onError: Colors.white,
+        ),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF00704A), // Starbucks Green
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF00704A), // Starbucks Green
+          foregroundColor: Colors.white,
+        ),
       ),
       home: const HomeScreen(),
     );
@@ -179,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         title: const Text('Five Minute Habits'),
         elevation: 2,
       ),
@@ -497,7 +518,9 @@ class _HabitCardState extends State<HabitCard> {
                     minHeight: 4,
                     backgroundColor: Colors.grey[300],
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _remainingSeconds > 0 ? Colors.deepPurple : Colors.green,
+                      _remainingSeconds > 0
+                          ? const Color(0xFF00704A) // Starbucks Green
+                          : const Color(0xFF1C7549), // Accent Green
                     ),
                   ),
                 ),

@@ -441,39 +441,37 @@ class _HabitCardState extends State<HabitCard> {
               ),
               if (_isExpanded) ...[
                 const SizedBox(height: 16),
-                // Circular progress indicator
-                Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 120,
-                        height: 120,
-                        child: CircularProgressIndicator(
-                          value: _getProgress(),
-                          strokeWidth: 8,
-                          backgroundColor: Colors.grey[300],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _remainingSeconds > 0
-                                ? Colors.deepPurple
-                                : Colors.green,
-                          ),
-                        ),
+                // Horizontal progress bar
+                Column(
+                  children: [
+                    // Time display
+                    Text(
+                      _formatTime(_remainingSeconds),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color:
+                            _remainingSeconds <= 60 && _isRunning
+                                ? Colors.red
+                                : _remainingSeconds == 0
+                                ? Colors.green
+                                : Colors.black87,
                       ),
-                      Text(
-                        _formatTime(_remainingSeconds),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color:
-                              _remainingSeconds <= 60 && _isRunning
-                                  ? Colors.red
-                                  : Colors.black87,
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Progress bar
+                    LinearProgressIndicator(
+                      value: _getProgress(),
+                      minHeight: 8,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _remainingSeconds > 0
+                            ? Colors.deepPurple
+                            : Colors.green,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 // Timer controls

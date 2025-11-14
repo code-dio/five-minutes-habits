@@ -105,6 +105,39 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  String _formatDate(DateTime date) {
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    final weekday = weekdays[date.weekday - 1];
+    final month = months[date.month - 1];
+    final day = date.day;
+    final year = date.year;
+
+    return '$weekday, $month $day, $year';
+  }
+
   void _showAddHabitDialog() {
     final TextEditingController nameController = TextEditingController();
     int selectedDuration = 5; // Default to 5 minutes
@@ -231,24 +264,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               )
-              : ReorderableListView(
-                padding: const EdgeInsets.all(8),
-                onReorder: _reorderHabits,
+              : Column(
                 children: [
-                  for (int index = 0; index < _habits.length; index++)
-                    HabitCard(
-                      key: ValueKey(_habits[index].id),
-                      habit: _habits[index],
-                      timerController: _timerControllers[_habits[index].id]!,
-                      remainingSeconds: _remainingSeconds[_habits[index].id]!,
-                      totalDuration: _habitDurations[_habits[index].id]!,
-                      onDelete: () => _deleteHabit(_habits[index].id),
-                      onTimeUpdate: (seconds) {
-                        setState(() {
-                          _remainingSeconds[_habits[index].id] = seconds;
-                        });
-                      },
+                  // Date header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      _formatDate(DateTime.now()),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  // Habit list
+                  Expanded(
+                    child: ReorderableListView(
+                      padding: const EdgeInsets.all(8),
+                      onReorder: _reorderHabits,
+                      children: [
+                        for (int index = 0; index < _habits.length; index++)
+                          HabitCard(
+                            key: ValueKey(_habits[index].id),
+                            habit: _habits[index],
+                            timerController:
+                                _timerControllers[_habits[index].id]!,
+                            remainingSeconds:
+                                _remainingSeconds[_habits[index].id]!,
+                            totalDuration: _habitDurations[_habits[index].id]!,
+                            onDelete: () => _deleteHabit(_habits[index].id),
+                            onTimeUpdate: (seconds) {
+                              setState(() {
+                                _remainingSeconds[_habits[index].id] = seconds;
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
       floatingActionButton: FloatingActionButton(

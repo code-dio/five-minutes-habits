@@ -213,15 +213,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         border: OutlineInputBorder(),
                         labelText: 'Select Duration',
                       ),
-                      items:
-                          [1, 2, 3, 4, 5].map((minutes) {
-                            return DropdownMenuItem<int>(
-                              value: minutes,
-                              child: Text(
-                                '$minutes minute${minutes > 1 ? 's' : ''}',
-                              ),
-                            );
-                          }).toList(),
+                      items: [
+                        const DropdownMenuItem<int>(
+                          value: 0,
+                          child: Text('Immediate'),
+                        ),
+                        ...([1, 2, 3, 4, 5].map((minutes) {
+                          return DropdownMenuItem<int>(
+                            value: minutes,
+                            child: Text(
+                              '$minutes minute${minutes > 1 ? 's' : ''}',
+                            ),
+                          );
+                        })),
+                      ],
                       onChanged: (value) {
                         if (value != null) {
                           setDialogState(() {
@@ -420,7 +425,18 @@ class _HabitCardState extends State<HabitCard> {
       _isCompleted = false;
     });
 
-    _tick();
+    // If duration is 0 (immediate), complete immediately
+    if (_totalDuration == 0) {
+      setState(() {
+        _remainingSeconds = 0;
+        _isRunning = false;
+        _isCompleted = true;
+      });
+      widget.onTimeUpdate(0);
+      _showCompletionDialog();
+    } else {
+      _tick();
+    }
   }
 
   void _stopTimer() {
@@ -484,12 +500,18 @@ class _HabitCardState extends State<HabitCard> {
   }
 
   String _formatTime(int seconds) {
+    if (seconds == 0 && _totalDuration == 0) {
+      return 'Done';
+    }
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   double _getProgress() {
+    if (_totalDuration == 0) {
+      return _isCompleted ? 1.0 : 0.0;
+    }
     return 1.0 - (_remainingSeconds / _totalDuration);
   }
 

@@ -95,6 +95,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _confirmDeleteHabit(String id, String habitName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Habit'),
+          content: Text('Are you sure you want to delete "$habitName"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteHabit(id);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _reorderHabits(int oldIndex, int newIndex) {
     setState(() {
       if (newIndex > oldIndex) {
@@ -306,7 +332,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             remainingSeconds:
                                 _remainingSeconds[_habits[index].id]!,
                             totalDuration: _habitDurations[_habits[index].id]!,
-                            onDelete: () => _deleteHabit(_habits[index].id),
+                            onDelete:
+                                () => _confirmDeleteHabit(
+                                  _habits[index].id,
+                                  _habits[index].name,
+                                ),
                             onTimeUpdate: (seconds) {
                               setState(() {
                                 _remainingSeconds[_habits[index].id] = seconds;

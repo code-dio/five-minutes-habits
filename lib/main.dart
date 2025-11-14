@@ -528,7 +528,7 @@ class _HabitCardState extends State<HabitCard> {
             ).withOpacity(0.2); // Accent Green with opacity
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.only(left: 8, right: 8, top: 1, bottom: 2),
       elevation: 2,
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -545,119 +545,18 @@ class _HabitCardState extends State<HabitCard> {
           ),
           // Content
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Above part: Time, drag handle, buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.drag_handle,
-                            color: Colors.grey[400],
-                            size: 18,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              widget.habit.name,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                decoration:
-                                    _isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                color:
-                                    _isCompleted
-                                        ? Colors.grey
-                                        : Theme.of(
-                                          context,
-                                        ).textTheme.titleLarge?.color,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Timer controls
-                    if (!_isRunning && _remainingSeconds == _totalDuration)
-                      IconButton(
-                        icon: const Icon(Icons.play_arrow, size: 20),
-                        onPressed: _startTimer,
-                        tooltip: 'Start',
-                        color: Theme.of(context).colorScheme.primary,
-                        padding: const EdgeInsets.all(8),
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                      )
-                    else if (_isRunning)
-                      IconButton(
-                        icon: const Icon(Icons.pause, size: 20),
-                        onPressed: _stopTimer,
-                        tooltip: 'Pause',
-                        color: Theme.of(context).colorScheme.primary,
-                        padding: const EdgeInsets.all(8),
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                      )
-                    else
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.play_arrow, size: 20),
-                            onPressed: _startTimer,
-                            tooltip: 'Resume',
-                            color: Theme.of(context).colorScheme.primary,
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(
-                              minWidth: 36,
-                              minHeight: 36,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.refresh, size: 20),
-                            onPressed: _resetTimer,
-                            tooltip: 'Reset',
-                            color: Theme.of(context).colorScheme.secondary,
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(
-                              minWidth: 36,
-                              minHeight: 36,
-                            ),
-                          ),
-                        ],
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      onPressed: widget.onDelete,
-                      tooltip: 'Delete',
-                      color: Colors.red,
-                      padding: const EdgeInsets.all(8),
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Time display
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
+                    // Time display
                     Text(
                       _formatTime(_remainingSeconds),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color:
                             _remainingSeconds <= 60 && _isRunning
@@ -667,7 +566,91 @@ class _HabitCardState extends State<HabitCard> {
                                 : Colors.black87,
                       ),
                     ),
+                    // Buttons
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Timer controls
+                        if (!_isRunning && _remainingSeconds == _totalDuration)
+                          IconButton(
+                            icon: const Icon(Icons.play_arrow, size: 18),
+                            onPressed: _startTimer,
+                            tooltip: 'Start',
+                            color: Theme.of(context).colorScheme.primary,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          )
+                        else if (_isRunning)
+                          IconButton(
+                            icon: const Icon(Icons.pause, size: 18),
+                            onPressed: _stopTimer,
+                            tooltip: 'Pause',
+                            color: Theme.of(context).colorScheme.primary,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          )
+                        else
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.play_arrow, size: 18),
+                                onPressed: _startTimer,
+                                tooltip: 'Resume',
+                                color: Theme.of(context).colorScheme.primary,
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.refresh, size: 18),
+                                onPressed: _resetTimer,
+                                tooltip: 'Reset',
+                                color: Theme.of(context).colorScheme.secondary,
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                              ),
+                            ],
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          onPressed: widget.onDelete,
+                          tooltip: 'Delete',
+                          color: Colors.red,
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
+                ),
+                const SizedBox(height: 4),
+                // Below part: Title (habit name)
+                Text(
+                  widget.habit.name,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    decoration:
+                        _isCompleted ? TextDecoration.lineThrough : null,
+                    color:
+                        _isCompleted
+                            ? Colors.grey
+                            : Theme.of(context).textTheme.titleLarge?.color,
+                  ),
                 ),
               ],
             ),

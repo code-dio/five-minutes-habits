@@ -406,14 +406,15 @@ class _HabitCardState extends State<HabitCard> {
     super.didUpdateWidget(oldWidget);
     if (widget.remainingSeconds != oldWidget.remainingSeconds) {
       _remainingSeconds = widget.remainingSeconds;
+      // Update completion state based on remaining seconds
+      if (_remainingSeconds == 0 && _totalDuration > 0) {
+        _isCompleted = true;
+      } else if (_remainingSeconds == _totalDuration) {
+        _isCompleted = false;
+      }
     }
     if (widget.totalDuration != oldWidget.totalDuration) {
       _totalDuration = widget.totalDuration;
-    }
-    if (_remainingSeconds == 0) {
-      _isCompleted = true;
-    } else if (_remainingSeconds == _totalDuration) {
-      _isCompleted = false;
     }
   }
 
@@ -451,7 +452,8 @@ class _HabitCardState extends State<HabitCard> {
       _remainingSeconds = _totalDuration;
       _isCompleted = false;
     });
-    widget.onTimeUpdate(_remainingSeconds);
+    // Update parent state with reset values
+    widget.onTimeUpdate(_totalDuration);
   }
 
   void _tick() {
@@ -571,7 +573,21 @@ class _HabitCardState extends State<HabitCard> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Timer controls
-                        if (!_isRunning && _remainingSeconds == _totalDuration)
+                        if (_isCompleted)
+                          // Cancel/Undo button for completed habits
+                          IconButton(
+                            icon: const Icon(Icons.undo, size: 18),
+                            onPressed: _resetTimer,
+                            tooltip: 'Cancel',
+                            color: Theme.of(context).colorScheme.secondary,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          )
+                        else if (!_isRunning &&
+                            _remainingSeconds == _totalDuration)
                           IconButton(
                             icon: const Icon(Icons.play_arrow, size: 18),
                             onPressed: _startTimer,

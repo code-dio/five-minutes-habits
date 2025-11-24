@@ -502,8 +502,9 @@ class _HabitCardState extends State<HabitCard> {
   }
 
   String _formatTime(int seconds) {
-    if (seconds == 0 && _totalDuration == 0) {
-      return 'Done';
+    if (_totalDuration == 0) {
+      // For immediate habits, show "Immediate" when not done, "Done" when completed
+      return _isCompleted ? 'Done' : 'Immediate';
     }
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
@@ -548,125 +549,127 @@ class _HabitCardState extends State<HabitCard> {
           // Content
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Above part: Time, drag handle, buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Time display
-                    Text(
-                      _formatTime(_remainingSeconds),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                // Time display
+                Text(
+                  _formatTime(_remainingSeconds),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color:
+                        _totalDuration == 0 && !_isCompleted
+                            ? Colors
+                                .black87 // "Immediate" in black
+                            : _remainingSeconds <= 60 && _isRunning
+                            ? Colors.red
+                            : _remainingSeconds == 0
+                            ? Colors.green
+                            : Colors.black87,
+                  ),
+                ),
+                // Habit name (title)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      widget.habit.name,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        decoration:
+                            _isCompleted ? TextDecoration.lineThrough : null,
                         color:
-                            _remainingSeconds <= 60 && _isRunning
-                                ? Colors.red
-                                : _remainingSeconds == 0
-                                ? Colors.green
-                                : Colors.black87,
+                            _isCompleted
+                                ? Colors.grey
+                                : Theme.of(context).textTheme.titleLarge?.color,
                       ),
                     ),
-                    // Buttons
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Timer controls
-                        if (_isCompleted)
-                          // Cancel/Undo button for completed habits
+                  ),
+                ),
+                // Buttons
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Timer controls
+                    if (_isCompleted)
+                      // Cancel/Undo button for completed habits
+                      IconButton(
+                        icon: const Icon(Icons.undo, size: 18),
+                        onPressed: _resetTimer,
+                        tooltip: 'Cancel',
+                        color: Theme.of(context).colorScheme.secondary,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      )
+                    else if (!_isRunning && _remainingSeconds == _totalDuration)
+                      IconButton(
+                        icon: const Icon(Icons.play_arrow, size: 18),
+                        onPressed: _startTimer,
+                        tooltip: 'Start',
+                        color: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      )
+                    else if (_isRunning)
+                      IconButton(
+                        icon: const Icon(Icons.pause, size: 18),
+                        onPressed: _stopTimer,
+                        tooltip: 'Pause',
+                        color: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      )
+                    else
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           IconButton(
-                            icon: const Icon(Icons.undo, size: 18),
+                            icon: const Icon(Icons.play_arrow, size: 18),
+                            onPressed: _startTimer,
+                            tooltip: 'Resume',
+                            color: Theme.of(context).colorScheme.primary,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.refresh, size: 18),
                             onPressed: _resetTimer,
-                            tooltip: 'Cancel',
+                            tooltip: 'Reset',
                             color: Theme.of(context).colorScheme.secondary,
                             padding: const EdgeInsets.all(6),
                             constraints: const BoxConstraints(
                               minWidth: 32,
                               minHeight: 32,
                             ),
-                          )
-                        else if (!_isRunning &&
-                            _remainingSeconds == _totalDuration)
-                          IconButton(
-                            icon: const Icon(Icons.play_arrow, size: 18),
-                            onPressed: _startTimer,
-                            tooltip: 'Start',
-                            color: Theme.of(context).colorScheme.primary,
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                          )
-                        else if (_isRunning)
-                          IconButton(
-                            icon: const Icon(Icons.pause, size: 18),
-                            onPressed: _stopTimer,
-                            tooltip: 'Pause',
-                            color: Theme.of(context).colorScheme.primary,
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                          )
-                        else
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.play_arrow, size: 18),
-                                onPressed: _startTimer,
-                                tooltip: 'Resume',
-                                color: Theme.of(context).colorScheme.primary,
-                                padding: const EdgeInsets.all(6),
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.refresh, size: 18),
-                                onPressed: _resetTimer,
-                                tooltip: 'Reset',
-                                color: Theme.of(context).colorScheme.secondary,
-                                padding: const EdgeInsets.all(6),
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                              ),
-                            ],
                           ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18),
-                          onPressed: widget.onDelete,
-                          tooltip: 'Delete',
-                          color: Colors.red,
-                          padding: const EdgeInsets.all(6),
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      onPressed: widget.onDelete,
+                      tooltip: 'Delete',
+                      color: Colors.red,
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 4),
-                // Below part: Title (habit name)
-                Text(
-                  widget.habit.name,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    decoration:
-                        _isCompleted ? TextDecoration.lineThrough : null,
-                    color:
-                        _isCompleted
-                            ? Colors.grey
-                            : Theme.of(context).textTheme.titleLarge?.color,
-                  ),
                 ),
               ],
             ),

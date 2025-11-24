@@ -216,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       items: [
                         const DropdownMenuItem<int>(
                           value: 0,
-                          child: Text('Immediate'),
+                          child: Text('Immed.'),
                         ),
                         ...([1, 2, 3, 4, 5].map((minutes) {
                           return DropdownMenuItem<int>(
@@ -503,8 +503,8 @@ class _HabitCardState extends State<HabitCard> {
 
   String _formatTime(int seconds) {
     if (_totalDuration == 0) {
-      // For immediate habits, show "Immediate" when not done, "Done" when completed
-      return _isCompleted ? 'Done' : 'Immediate';
+      // For immediate habits, show "Immed." when not done, "Done" when completed
+      return _isCompleted ? 'Done' : 'Immed.';
     }
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;

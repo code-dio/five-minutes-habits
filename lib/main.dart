@@ -50,11 +50,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Habit> _habits = [];
+  // Store habits per date: Map<date (normalized to day), List<Habit>>
+  final Map<String, List<Habit>> _habitsByDate = {};
   final Map<String, TimerController> _timerControllers = {};
   final Map<String, int> _remainingSeconds = {};
   final Map<String, int> _habitDurations =
       {}; // Store duration in seconds for each habit
+  DateTime _selectedDate = DateTime.now();
+
+  // Helper to normalize date to day (remove time component)
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month}-${date.day}';
+  }
+
+  // Get habits for selected date
+  List<Habit> get _currentHabits {
+    final key = _dateKey(_selectedDate);
+    return _habitsByDate[key] ?? [];
+  }
 
   @override
   void dispose() {
@@ -69,16 +82,18 @@ class _HomeScreenState extends State<HomeScreen> {
     if (name.trim().isEmpty) return;
 
     final habit = Habit(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: '${_dateKey(_selectedDate)}-${DateTime.now().millisecondsSinceEpoch}',
       name: name.trim(),
       createdAt: DateTime.now(),
       durationMinutes: durationMinutes,
+      date: _selectedDate,
     );
 
     final durationSeconds = durationMinutes * 60;
+    final dateKey = _dateKey(_selectedDate);
 
     setState(() {
-      _habits.add(habit);
+      _habitsByDate.putIfAbsent(dateKey, () => []).add(habit);
       _remainingSeconds[habit.id] = durationSeconds;
       _habitDurations[habit.id] = durationSeconds;
       _timerControllers[habit.id] = TimerController();
@@ -87,7 +102,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _deleteHabit(String id) {
     setState(() {
-      _habits.removeWhere((habit) => habit.id == id);
+      // Find and remove habit from the appropriate date
+      for (var habits in _habitsByDate.values) {
+        habits.removeWhere((habit) => habit.id == id);
+      }
       _timerControllers[id]?.dispose();
       _timerControllers.remove(id);
       _remainingSeconds.remove(id);
@@ -126,8 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (newIndex > oldIndex) {
         newIndex -= 1;
       }
-      final habit = _habits.removeAt(oldIndex);
-      _habits.insert(newIndex, habit);
+      final habits = _currentHabits;
+      final habit = habits.removeAt(oldIndex);
+      habits.insert(newIndex, habit);
     });
   }
 
@@ -162,6 +181,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final year = date.year;
 
     return '$weekday, $month $day, $year';
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  String _getWeekdayAbbreviation(int weekday) {
+    const abbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return abbreviations[weekday - 1];
   }
 
   void _showAddHabitDialog() {
@@ -268,91 +298,161 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Five Minute Habits'),
         elevation: 2,
       ),
-      body:
-          _habits.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.fitness_center,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No habits yet',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap the + button to add a habit',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-                    ),
-                  ],
+      body: Column(
+        children: [
+          // Date selector - always visible, horizontally scrollable (7 days visible)
+          Container(
+            height: 70,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
-              )
-              : Column(
-                children: [
-                  // Date header
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+              ],
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth =
+                    (constraints.maxWidth - 16) /
+                    7; // 7 days visible, minus padding
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: 30, // Show 30 days (past and future)
+                  itemBuilder: (context, index) {
+                    final date = DateTime.now().subtract(
+                      Duration(
+                        days: 7 - index,
+                      ), // Show 7 days before and after today
+                    );
+                    final isSelected = _isSameDay(date, _selectedDate);
+                    final isToday = _isSameDay(date, DateTime.now());
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedDate = date;
+                        });
+                      },
+                      child: Container(
+                        width: itemWidth,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                isToday
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey[300]!,
+                            width: isToday ? 2 : 1,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      _formatDate(DateTime.now()),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _getWeekdayAbbreviation(date.weekday),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    isSelected
+                                        ? Colors.white
+                                        : Colors.grey[600],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${date.day}',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleMedium?.copyWith(
+                                color:
+                                    isSelected ? Colors.white : Colors.black87,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
-                  // Habit list
-                  Expanded(
-                    child: ReorderableListView(
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          // Habit list or empty state
+          Expanded(
+            child:
+                _currentHabits.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.fitness_center,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No habits yet',
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap the + button to add a habit',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    )
+                    : ReorderableListView(
                       padding: const EdgeInsets.all(8),
                       onReorder: _reorderHabits,
                       children: [
-                        for (int index = 0; index < _habits.length; index++)
+                        for (
+                          int index = 0;
+                          index < _currentHabits.length;
+                          index++
+                        )
                           HabitCard(
-                            key: ValueKey(_habits[index].id),
-                            habit: _habits[index],
+                            key: ValueKey(_currentHabits[index].id),
+                            habit: _currentHabits[index],
                             timerController:
-                                _timerControllers[_habits[index].id]!,
+                                _timerControllers[_currentHabits[index].id]!,
                             remainingSeconds:
-                                _remainingSeconds[_habits[index].id]!,
-                            totalDuration: _habitDurations[_habits[index].id]!,
+                                _remainingSeconds[_currentHabits[index].id]!,
+                            totalDuration:
+                                _habitDurations[_currentHabits[index].id]!,
                             onDelete:
                                 () => _confirmDeleteHabit(
-                                  _habits[index].id,
-                                  _habits[index].name,
+                                  _currentHabits[index].id,
+                                  _currentHabits[index].name,
                                 ),
                             onTimeUpdate: (seconds) {
                               setState(() {
-                                _remainingSeconds[_habits[index].id] = seconds;
+                                _remainingSeconds[_currentHabits[index].id] =
+                                    seconds;
                               });
                             },
                           ),
                       ],
                     ),
-                  ),
-                ],
-              ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddHabitDialog,
         tooltip: 'Add Habit',

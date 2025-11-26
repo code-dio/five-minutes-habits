@@ -290,6 +290,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showCalendarDialog() {
+    showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    ).then((selectedDate) {
+      if (selectedDate != null) {
+        setState(() {
+          _selectedDate = selectedDate;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -297,6 +322,13 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         title: const Text('Five Minute Habits'),
         elevation: 2,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            onPressed: _showCalendarDialog,
+            tooltip: 'Select Date',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -316,14 +348,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // Show 7 days with today in the middle (3 before, today, 3 after)
+                // Show 7 days with selected date in the middle (3 before, selected, 3 after)
                 final today = DateTime.now();
 
                 return Row(
                   children: List.generate(7, (index) {
-                    final date = today.subtract(
+                    final date = _selectedDate.subtract(
                       Duration(days: 3 - index),
-                    ); // 3 days before to 3 days after
+                    ); // 3 days before to 3 days after selected date
                     final isSelected = _isSameDay(date, _selectedDate);
                     final isToday = _isSameDay(date, today);
 

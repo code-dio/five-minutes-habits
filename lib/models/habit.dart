@@ -4,7 +4,7 @@ class Habit {
   final DateTime createdAt;
   final int durationMinutes; // Duration in minutes (1-5)
   final DateTime date; // Date this habit is associated with
-  
+
   Habit({
     required this.id,
     required this.name,
@@ -12,7 +12,7 @@ class Habit {
     required this.durationMinutes,
     required this.date,
   });
-  
+
   Habit copyWith({
     String? id,
     String? name,
@@ -28,7 +28,6 @@ class Habit {
       date: date ?? this.date,
     );
   }
-  
+
   int get durationSeconds => durationMinutes * 60;
 }
-

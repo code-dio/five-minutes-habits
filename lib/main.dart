@@ -316,76 +316,86 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final itemWidth =
-                    (constraints.maxWidth - 16) /
-                    7; // 7 days visible, minus padding
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  itemCount: 30, // Show 30 days (past and future)
-                  itemBuilder: (context, index) {
-                    final date = DateTime.now().subtract(
-                      Duration(
-                        days: 7 - index,
-                      ), // Show 7 days before and after today
-                    );
-                    final isSelected = _isSameDay(date, _selectedDate);
-                    final isToday = _isSameDay(date, DateTime.now());
+                // Show 7 days with today in the middle (3 before, today, 3 after)
+                final today = DateTime.now();
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedDate = date;
-                        });
-                      },
-                      child: Container(
-                        width: itemWidth,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
+                return Row(
+                  children: List.generate(7, (index) {
+                    final date = today.subtract(
+                      Duration(days: 3 - index),
+                    ); // 3 days before to 3 days after
+                    final isSelected = _isSameDay(date, _selectedDate);
+                    final isToday = _isSameDay(date, today);
+
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedDate = date;
+                          });
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
                             color:
-                                isToday
+                                isSelected
                                     ? Theme.of(context).colorScheme.primary
-                                    : Colors.grey[300]!,
-                            width: isToday ? 2 : 1,
+                                    : isToday && !isSelected
+                                    ? Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.1)
+                                    : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color:
+                                  isToday
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.grey[300]!,
+                              width: isToday ? 2 : 1,
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _getWeekdayAbbreviation(date.weekday),
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color:
-                                    isSelected
-                                        ? Colors.white
-                                        : Colors.grey[600],
-                                fontWeight: FontWeight.bold,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _getWeekdayAbbreviation(date.weekday),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(
+                                  color:
+                                      isSelected
+                                          ? Colors.white
+                                          : isToday
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.primary
+                                          : Colors.grey[600],
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${date.day}',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.titleMedium?.copyWith(
-                                color:
-                                    isSelected ? Colors.white : Colors.black87,
-                                fontWeight: FontWeight.bold,
+                              const SizedBox(height: 4),
+                              Text(
+                                '${date.day}',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(
+                                  color:
+                                      isSelected
+                                          ? Colors.white
+                                          : isToday
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.primary
+                                          : Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );
-                  },
+                  }),
                 );
               },
             ),

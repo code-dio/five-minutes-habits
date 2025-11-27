@@ -56,6 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<String, int> _remainingSeconds = {};
   final Map<String, int> _habitDurations =
       {}; // Store duration in seconds for each habit
+  final Map<String, bool> _habitCompletionStatus =
+      {}; // Track completion status for each habit
   DateTime _selectedDate = DateTime.now();
 
   // Helper to normalize date to day (remove time component)
@@ -81,22 +83,29 @@ class _HomeScreenState extends State<HomeScreen> {
   void _addHabit(String name, int durationMinutes) {
     if (name.trim().isEmpty) return;
 
-    final habit = Habit(
-      id: '${_dateKey(_selectedDate)}-${DateTime.now().millisecondsSinceEpoch}',
-      name: name.trim(),
-      createdAt: DateTime.now(),
-      durationMinutes: durationMinutes,
-      date: _selectedDate,
-    );
-
+    final creationTime = DateTime.now().millisecondsSinceEpoch;
     final durationSeconds = durationMinutes * 60;
-    final dateKey = _dateKey(_selectedDate);
 
     setState(() {
-      _habitsByDate.putIfAbsent(dateKey, () => []).add(habit);
-      _remainingSeconds[habit.id] = durationSeconds;
-      _habitDurations[habit.id] = durationSeconds;
-      _timerControllers[habit.id] = TimerController();
+      // Add habit to all days from the selected date onwards (next 365 days)
+      for (int i = 0; i < 365; i++) {
+        final targetDate = _selectedDate.add(Duration(days: i));
+        final dateKey = _dateKey(targetDate);
+
+        final habit = Habit(
+          id: '$dateKey-${name.trim()}-$creationTime-$i',
+          name: name.trim(),
+          createdAt: DateTime.now(),
+          durationMinutes: durationMinutes,
+          date: targetDate,
+        );
+
+        _habitsByDate.putIfAbsent(dateKey, () => []).add(habit);
+        _remainingSeconds[habit.id] = durationSeconds;
+        _habitDurations[habit.id] = durationSeconds;
+        _timerControllers[habit.id] = TimerController();
+        _habitCompletionStatus[habit.id] = false; // Initially not completed
+      }
     });
   }
 
@@ -110,6 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _timerControllers.remove(id);
       _remainingSeconds.remove(id);
       _habitDurations.remove(id);
+      _habitCompletionStatus.remove(id);
     });
   }
 
@@ -478,6 +488,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _remainingSeconds[_currentHabits[index].id]!,
                             totalDuration:
                                 _habitDurations[_currentHabits[index].id]!,
+                            isCompleted:
+                                _habitCompletionStatus[_currentHabits[index]
+                                    .id] ??
+                                false,
                             onDelete:
                                 () => _confirmDeleteHabit(
                                   _currentHabits[index].id,
@@ -487,6 +501,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               setState(() {
                                 _remainingSeconds[_currentHabits[index].id] =
                                     seconds;
+                              });
+                            },
+                            onCompletionChanged: (isCompleted) {
+                              setState(() {
+                                _habitCompletionStatus[_currentHabits[index]
+                                        .id] =
+                                    isCompleted;
                               });
                             },
                           ),
@@ -513,8 +534,10 @@ class HabitCard extends StatefulWidget {
   final TimerController timerController;
   final int remainingSeconds;
   final int totalDuration;
+  final bool isCompleted;
   final VoidCallback onDelete;
   final Function(int) onTimeUpdate;
+  final Function(bool) onCompletionChanged;
 
   const HabitCard({
     super.key,
@@ -522,8 +545,10 @@ class HabitCard extends StatefulWidget {
     required this.timerController,
     required this.remainingSeconds,
     required this.totalDuration,
+    required this.isCompleted,
     required this.onDelete,
     required this.onTimeUpdate,
+    required this.onCompletionChanged,
   });
 
   @override
@@ -532,7 +557,7 @@ class HabitCard extends StatefulWidget {
 
 class _HabitCardState extends State<HabitCard> {
   bool _isRunning = false;
-  bool _isCompleted = false;
+  late bool _isCompleted;
   late int _remainingSeconds;
   late int _totalDuration;
 
@@ -541,6 +566,7 @@ class _HabitCardState extends State<HabitCard> {
     super.initState();
     _remainingSeconds = widget.remainingSeconds;
     _totalDuration = widget.totalDuration;
+    _isCompleted = widget.isCompleted;
   }
 
   @override
@@ -548,15 +574,12 @@ class _HabitCardState extends State<HabitCard> {
     super.didUpdateWidget(oldWidget);
     if (widget.remainingSeconds != oldWidget.remainingSeconds) {
       _remainingSeconds = widget.remainingSeconds;
-      // Update completion state based on remaining seconds
-      if (_remainingSeconds == 0 && _totalDuration > 0) {
-        _isCompleted = true;
-      } else if (_remainingSeconds == _totalDuration) {
-        _isCompleted = false;
-      }
     }
     if (widget.totalDuration != oldWidget.totalDuration) {
       _totalDuration = widget.totalDuration;
+    }
+    if (widget.isCompleted != oldWidget.isCompleted) {
+      _isCompleted = widget.isCompleted;
     }
   }
 
@@ -576,6 +599,7 @@ class _HabitCardState extends State<HabitCard> {
         _isCompleted = true;
       });
       widget.onTimeUpdate(0);
+      widget.onCompletionChanged(true);
       _showCompletionDialog();
     } else {
       _tick();
@@ -596,6 +620,7 @@ class _HabitCardState extends State<HabitCard> {
     });
     // Update parent state with reset values
     widget.onTimeUpdate(_totalDuration);
+    widget.onCompletionChanged(false);
   }
 
   void _tick() {
@@ -612,6 +637,7 @@ class _HabitCardState extends State<HabitCard> {
           if (_remainingSeconds == 0) {
             _isRunning = false;
             _isCompleted = true;
+            widget.onCompletionChanged(true);
             _showCompletionDialog();
           } else {
             _tick();

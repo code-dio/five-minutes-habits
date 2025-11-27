@@ -49,7 +49,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   // Store habits per date: Map<date (normalized to day), List<Habit>>
   final Map<String, List<Habit>> _habitsByDate = {};
   final Map<String, TimerController> _timerControllers = {};
@@ -59,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<String, bool> _habitCompletionStatus =
       {}; // Track completion status for each habit
   DateTime _selectedDate = DateTime.now();
+  late TabController _tabController;
 
   // Helper to normalize date to day (remove time component)
   String _dateKey(DateTime date) {
@@ -72,11 +74,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
   void dispose() {
     // Dispose all timers
     for (var controller in _timerControllers.values) {
       controller.dispose();
     }
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -339,181 +348,43 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Select Date',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(icon: Icon(Icons.fitness_center), text: 'Habits'),
+            Tab(icon: Icon(Icons.analytics), text: 'Stats'),
+          ],
+        ),
       ),
-      body: Column(
-        children: [
-          // Date selector - always visible, horizontally scrollable (7 days visible)
-          Container(
-            height: 70,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      body: Container(
+        color: Theme.of(context).colorScheme.background,
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            // Habits Tab
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: _buildHabitsTab(),
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // Show 7 days with selected date in the middle (3 before, selected, 3 after)
-                final today = DateTime.now();
-
-                return Row(
-                  children: List.generate(7, (index) {
-                    final date = _selectedDate.subtract(
-                      Duration(days: 3 - index),
-                    ); // 3 days before to 3 days after selected date
-                    final isSelected = _isSameDay(date, _selectedDate);
-                    final isToday = _isSameDay(date, today);
-
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedDate = date;
-                          });
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          decoration: BoxDecoration(
-                            color:
-                                isSelected
-                                    ? Theme.of(context).colorScheme.primary
-                                    : isToday && !isSelected
-                                    ? Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.1)
-                                    : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color:
-                                  isToday
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Colors.grey[300]!,
-                              width: isToday ? 2 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _getWeekdayAbbreviation(date.weekday),
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.copyWith(
-                                  color:
-                                      isSelected
-                                          ? Colors.white
-                                          : isToday
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.primary
-                                          : Colors.grey[600],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${date.day}',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleMedium?.copyWith(
-                                  color:
-                                      isSelected
-                                          ? Colors.white
-                                          : isToday
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.primary
-                                          : Colors.black87,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                );
-              },
+            // Stats Tab
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: _buildStatsTab(),
             ),
-          ),
-          // Habit list or empty state
-          Expanded(
-            child:
-                _currentHabits.isEmpty
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.fitness_center,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No habits yet',
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(color: Colors.grey[600]),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap the + button to add a habit',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey[500]),
-                          ),
-                        ],
-                      ),
-                    )
-                    : ReorderableListView(
-                      padding: const EdgeInsets.all(8),
-                      onReorder: _reorderHabits,
-                      children: [
-                        for (
-                          int index = 0;
-                          index < _currentHabits.length;
-                          index++
-                        )
-                          HabitCard(
-                            key: ValueKey(_currentHabits[index].id),
-                            habit: _currentHabits[index],
-                            timerController:
-                                _timerControllers[_currentHabits[index].id]!,
-                            remainingSeconds:
-                                _remainingSeconds[_currentHabits[index].id]!,
-                            totalDuration:
-                                _habitDurations[_currentHabits[index].id]!,
-                            isCompleted:
-                                _habitCompletionStatus[_currentHabits[index]
-                                    .id] ??
-                                false,
-                            onDelete:
-                                () => _confirmDeleteHabit(
-                                  _currentHabits[index].id,
-                                  _currentHabits[index].name,
-                                ),
-                            onTimeUpdate: (seconds) {
-                              setState(() {
-                                _remainingSeconds[_currentHabits[index].id] =
-                                    seconds;
-                              });
-                            },
-                            onCompletionChanged: (isCompleted) {
-                              setState(() {
-                                _habitCompletionStatus[_currentHabits[index]
-                                        .id] =
-                                    isCompleted;
-                              });
-                            },
-                          ),
-                      ],
-                    ),
-          ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: TabBar(
+        controller: _tabController,
+        indicatorColor: Theme.of(context).colorScheme.primary,
+        labelColor: Theme.of(context).colorScheme.primary,
+        unselectedLabelColor: Colors.grey,
+        tabs: const [
+          Tab(icon: Icon(Icons.fitness_center), text: 'Habits'),
+          Tab(icon: Icon(Icons.analytics), text: 'Stats'),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -522,6 +393,443 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Widget _buildHabitsTab() {
+    return Column(
+      children: [
+        // Date selector - always visible, horizontally scrollable (7 days visible)
+        Container(
+          height: 70,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Show 7 days with selected date in the middle (3 before, selected, 3 after)
+              final today = DateTime.now();
+
+              return Row(
+                children: List.generate(7, (index) {
+                  final date = _selectedDate.subtract(
+                    Duration(days: 3 - index),
+                  ); // 3 days before to 3 days after selected date
+                  final isSelected = _isSameDay(date, _selectedDate);
+                  final isToday = _isSameDay(date, today);
+
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedDate = date;
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : isToday && !isSelected
+                                  ? Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withOpacity(0.1)
+                                  : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                isToday
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey[300]!,
+                            width: isToday ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _getWeekdayAbbreviation(date.weekday),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    isSelected
+                                        ? Colors.white
+                                        : isToday
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.grey[600],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${date.day}',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleMedium?.copyWith(
+                                color:
+                                    isSelected
+                                        ? Colors.white
+                                        : isToday
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.black87,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        ),
+        // Habit list or empty state
+        Expanded(
+          child:
+              _currentHabits.isEmpty
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.fitness_center,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No habits yet',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap the + button to add a habit',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  )
+                  : ReorderableListView(
+                    padding: const EdgeInsets.all(8),
+                    onReorder: _reorderHabits,
+                    children: [
+                      for (
+                        int index = 0;
+                        index < _currentHabits.length;
+                        index++
+                      )
+                        HabitCard(
+                          key: ValueKey(_currentHabits[index].id),
+                          habit: _currentHabits[index],
+                          timerController:
+                              _timerControllers[_currentHabits[index].id]!,
+                          remainingSeconds:
+                              _remainingSeconds[_currentHabits[index].id]!,
+                          totalDuration:
+                              _habitDurations[_currentHabits[index].id]!,
+                          isCompleted:
+                              _habitCompletionStatus[_currentHabits[index]
+                                  .id] ??
+                              false,
+                          onDelete:
+                              () => _confirmDeleteHabit(
+                                _currentHabits[index].id,
+                                _currentHabits[index].name,
+                              ),
+                          onTimeUpdate: (seconds) {
+                            setState(() {
+                              _remainingSeconds[_currentHabits[index].id] =
+                                  seconds;
+                            });
+                          },
+                          onCompletionChanged: (isCompleted) {
+                            setState(() {
+                              _habitCompletionStatus[_currentHabits[index].id] =
+                                  isCompleted;
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsTab() {
+    // Calculate statistics
+    final totalDays = _habitsByDate.length;
+    final totalHabits = _habitsByDate.values.expand((habits) => habits).length;
+
+    // Get recent 7 days of data
+    final today = DateTime.now();
+    final recentDays = List.generate(7, (index) {
+      final date = today.subtract(Duration(days: 6 - index));
+      final dateKey = _dateKey(date);
+      final habits = _habitsByDate[dateKey] ?? [];
+      final completedCount =
+          habits
+              .where((habit) => _habitCompletionStatus[habit.id] == true)
+              .length;
+      return {
+        'date': date,
+        'habits': habits,
+        'totalCount': habits.length,
+        'completedCount': completedCount,
+      };
+    });
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Summary Cards
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  'Total Days',
+                  totalDays.toString(),
+                  Icons.calendar_today,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  'Total Habits',
+                  totalHabits.toString(),
+                  Icons.fitness_center,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Recent 7 Days
+          Text(
+            'Recent 7 Days',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Expanded(
+            child: ListView.builder(
+              itemCount: recentDays.length,
+              itemBuilder: (context, index) {
+                final dayData = recentDays[index];
+                final date = dayData['date'] as DateTime;
+                final habits = dayData['habits'] as List<Habit>;
+                final totalCount = dayData['totalCount'] as int;
+                final completedCount = dayData['completedCount'] as int;
+                final isToday = _isSameDay(date, today);
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color:
+                            isToday
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _getWeekdayAbbreviation(date.weekday),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  isToday
+                                      ? Colors.white
+                                      : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          Text(
+                            '${date.day}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  isToday
+                                      ? Colors.white
+                                      : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    title: Text(
+                      _formatDateForStatus(date),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle:
+                        totalCount > 0
+                            ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('$completedCount/$totalCount completed'),
+                                const SizedBox(height: 4),
+                                LinearProgressIndicator(
+                                  value:
+                                      totalCount > 0
+                                          ? completedCount / totalCount
+                                          : 0,
+                                  backgroundColor: Colors.grey[300],
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 4,
+                                  children:
+                                      habits.map((habit) {
+                                        final isCompleted =
+                                            _habitCompletionStatus[habit.id] ==
+                                            true;
+                                        return Chip(
+                                          label: Text(
+                                            habit.name,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              decoration:
+                                                  isCompleted
+                                                      ? TextDecoration
+                                                          .lineThrough
+                                                      : null,
+                                            ),
+                                          ),
+                                          backgroundColor:
+                                              isCompleted
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                      .withOpacity(0.2)
+                                                  : Colors.grey[200],
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                          visualDensity: VisualDensity.compact,
+                                        );
+                                      }).toList(),
+                                ),
+                              ],
+                            )
+                            : const Text('No habits'),
+                    trailing:
+                        totalCount > 0
+                            ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.primary,
+                                  radius: 12,
+                                  child: Text(
+                                    '$completedCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '${(totalCount > 0 ? (completedCount / totalCount * 100).round() : 0)}%',
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ],
+                            )
+                            : Icon(
+                              Icons.remove_circle_outline,
+                              color: Colors.grey[400],
+                            ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDateForStatus(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }
 

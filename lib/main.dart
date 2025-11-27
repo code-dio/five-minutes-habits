@@ -348,16 +348,6 @@ class _HomeScreenState extends State<HomeScreen>
             tooltip: 'Select Date',
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.fitness_center), text: 'Habits'),
-            Tab(icon: Icon(Icons.analytics), text: 'Stats'),
-          ],
-        ),
       ),
       body: Container(
         color: Theme.of(context).colorScheme.background,

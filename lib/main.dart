@@ -972,29 +972,13 @@ class _HabitCardState extends State<HabitCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Time display
-                Text(
-                  _formatTime(_remainingSeconds),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color:
-                        _totalDuration == 0 && !_isCompleted
-                            ? Colors
-                                .black87 // "Immediate" in black
-                            : _remainingSeconds <= 60 && _isRunning
-                            ? Colors.red
-                            : _remainingSeconds == 0
-                            ? Colors.green
-                            : Colors.black87,
-                  ),
-                ),
                 // Habit name (title)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
                       widget.habit.name,
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.left,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         decoration:
@@ -1078,6 +1062,22 @@ class _HabitCardState extends State<HabitCard> {
                         ],
                       ),
                   ],
+                ),
+                // Time display
+                Text(
+                  _formatTime(_remainingSeconds),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color:
+                        _totalDuration == 0 && !_isCompleted
+                            ? Colors
+                                .black87 // "Immediate" in black
+                            : _remainingSeconds <= 60 && _isRunning
+                            ? Colors.red
+                            : _remainingSeconds == 0
+                            ? Colors.green
+                            : Colors.black87,
+                  ),
                 ),
               ],
             ),

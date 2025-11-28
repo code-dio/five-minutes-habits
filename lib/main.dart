@@ -118,46 +118,6 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  void _deleteHabit(String id) {
-    setState(() {
-      // Find and remove habit from the appropriate date
-      for (var habits in _habitsByDate.values) {
-        habits.removeWhere((habit) => habit.id == id);
-      }
-      _timerControllers[id]?.dispose();
-      _timerControllers.remove(id);
-      _remainingSeconds.remove(id);
-      _habitDurations.remove(id);
-      _habitCompletionStatus.remove(id);
-    });
-  }
-
-  void _confirmDeleteHabit(String id, String habitName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Habit'),
-          content: Text('Are you sure you want to delete "$habitName"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _deleteHabit(id);
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _reorderHabits(int oldIndex, int newIndex) {
     setState(() {
       if (newIndex > oldIndex) {
@@ -534,11 +494,6 @@ class _HomeScreenState extends State<HomeScreen>
                               _habitCompletionStatus[_currentHabits[index]
                                   .id] ??
                               false,
-                          onDelete:
-                              () => _confirmDeleteHabit(
-                                _currentHabits[index].id,
-                                _currentHabits[index].name,
-                              ),
                           onTimeUpdate: (seconds) {
                             setState(() {
                               _remainingSeconds[_currentHabits[index].id] =
@@ -833,7 +788,6 @@ class HabitCard extends StatefulWidget {
   final int remainingSeconds;
   final int totalDuration;
   final bool isCompleted;
-  final VoidCallback onDelete;
   final Function(int) onTimeUpdate;
   final Function(bool) onCompletionChanged;
 
@@ -844,7 +798,6 @@ class HabitCard extends StatefulWidget {
     required this.remainingSeconds,
     required this.totalDuration,
     required this.isCompleted,
-    required this.onDelete,
     required this.onTimeUpdate,
     required this.onCompletionChanged,
   });
@@ -1124,17 +1077,6 @@ class _HabitCardState extends State<HabitCard> {
                           ),
                         ],
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      onPressed: widget.onDelete,
-                      tooltip: 'Delete',
-                      color: Colors.red,
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
-                    ),
                   ],
                 ),
               ],

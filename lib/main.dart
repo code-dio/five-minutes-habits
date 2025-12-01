@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'models/habit.dart';
 
 void main() {
@@ -299,7 +300,14 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
-        title: const Text('Five Minute Habits'),
+        title: Text(
+          'Five Minute Habits',
+          style: GoogleFonts.dancingScript(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         elevation: 2,
         actions: [
           IconButton(

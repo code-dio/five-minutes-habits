@@ -50,8 +50,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   // Store habits per date: Map<date (normalized to day), List<Habit>>
   final Map<String, List<Habit>> _habitsByDate = {};
   final Map<String, TimerController> _timerControllers = {};
@@ -61,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen>
   final Map<String, bool> _habitCompletionStatus =
       {}; // Track completion status for each habit
   DateTime _selectedDate = DateTime.now();
-  late TabController _tabController;
 
   // Helper to normalize date to day (remove time component)
   String _dateKey(DateTime date) {
@@ -75,18 +73,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
   void dispose() {
     // Dispose all timers
     for (var controller in _timerControllers.values) {
       controller.dispose();
     }
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -319,31 +310,8 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       body: Container(
         color: Theme.of(context).colorScheme.background,
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            // Habits Tab
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: _buildHabitsTab(),
-            ),
-            // Stats Tab
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: _buildStatsTab(),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: TabBar(
-        controller: _tabController,
-        indicatorColor: Theme.of(context).colorScheme.primary,
-        labelColor: Theme.of(context).colorScheme.primary,
-        unselectedLabelColor: Colors.grey,
-        tabs: const [
-          Tab(icon: Icon(Icons.fitness_center), text: 'Habits'),
-          Tab(icon: Icon(Icons.analytics), text: 'Stats'),
-        ],
+        margin: const EdgeInsets.only(bottom: 8),
+        child: _buildHabitsTab(),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddHabitDialog,

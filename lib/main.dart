@@ -286,6 +286,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _showHabitStats(Habit habit) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => HabitStatsScreen(
+              habit: habit,
+              habitsByDate: _habitsByDate,
+              habitCompletionStatus: _habitCompletionStatus,
+              dateKey: _dateKey,
+            ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -481,6 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   isCompleted;
                             });
                           },
+                          onTap: () => _showHabitStats(_currentHabits[index]),
                         ),
                     ],
                   ),
@@ -765,6 +781,7 @@ class HabitCard extends StatefulWidget {
   final bool isCompleted;
   final Function(int) onTimeUpdate;
   final Function(bool) onCompletionChanged;
+  final VoidCallback? onTap;
 
   const HabitCard({
     super.key,
@@ -775,6 +792,7 @@ class HabitCard extends StatefulWidget {
     required this.isCompleted,
     required this.onTimeUpdate,
     required this.onCompletionChanged,
+    this.onTap,
   });
 
   @override
@@ -928,136 +946,625 @@ class _HabitCardState extends State<HabitCard> {
       margin: const EdgeInsets.only(left: 8, right: 8, top: 1, bottom: 2),
       elevation: 2,
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          // Color fill based on progress
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                widthFactor: progress,
-                child: Container(color: fillColor),
+      child: InkWell(
+        onTap: widget.onTap,
+        child: Stack(
+          children: [
+            // Color fill based on progress
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: progress,
+                  child: Container(color: fillColor),
+                ),
               ),
             ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Habit name (title)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      widget.habit.name,
-                      textAlign: TextAlign.left,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        decoration:
-                            _isCompleted ? TextDecoration.lineThrough : null,
-                        color:
-                            _isCompleted
-                                ? Colors.grey
-                                : Theme.of(context).textTheme.titleLarge?.color,
+            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Habit name (title)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        widget.habit.name,
+                        textAlign: TextAlign.left,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          decoration:
+                              _isCompleted ? TextDecoration.lineThrough : null,
+                          color:
+                              _isCompleted
+                                  ? Colors.grey
+                                  : Theme.of(
+                                    context,
+                                  ).textTheme.titleLarge?.color,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                // Buttons
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Timer controls
-                    if (_isCompleted)
-                      // Cancel/Undo button for completed habits
-                      IconButton(
-                        icon: const Icon(Icons.undo, size: 18),
-                        onPressed: _resetTimer,
-                        tooltip: 'Cancel',
-                        color: Theme.of(context).colorScheme.secondary,
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                      )
-                    else if (!_isRunning && _remainingSeconds == _totalDuration)
-                      IconButton(
-                        icon: const Icon(Icons.play_arrow, size: 18),
-                        onPressed: _startTimer,
-                        tooltip: 'Start',
-                        color: Theme.of(context).colorScheme.primary,
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                      )
-                    else if (_isRunning)
-                      IconButton(
-                        icon: const Icon(Icons.pause, size: 18),
-                        onPressed: _stopTimer,
-                        tooltip: 'Pause',
-                        color: Theme.of(context).colorScheme.primary,
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                      )
-                    else
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.play_arrow, size: 18),
-                            onPressed: _startTimer,
-                            tooltip: 'Resume',
-                            color: Theme.of(context).colorScheme.primary,
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
+                  // Buttons
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Timer controls
+                      if (_isCompleted)
+                        // Cancel/Undo button for completed habits
+                        IconButton(
+                          icon: const Icon(Icons.undo, size: 18),
+                          onPressed: _resetTimer,
+                          tooltip: 'Cancel',
+                          color: Theme.of(context).colorScheme.secondary,
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.refresh, size: 18),
-                            onPressed: _resetTimer,
-                            tooltip: 'Reset',
-                            color: Theme.of(context).colorScheme.secondary,
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
+                        )
+                      else if (!_isRunning &&
+                          _remainingSeconds == _totalDuration)
+                        IconButton(
+                          icon: const Icon(Icons.play_arrow, size: 18),
+                          onPressed: _startTimer,
+                          tooltip: 'Start',
+                          color: Theme.of(context).colorScheme.primary,
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
                           ),
-                        ],
-                      ),
-                  ],
+                        )
+                      else if (_isRunning)
+                        IconButton(
+                          icon: const Icon(Icons.pause, size: 18),
+                          onPressed: _stopTimer,
+                          tooltip: 'Pause',
+                          color: Theme.of(context).colorScheme.primary,
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                        )
+                      else
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.play_arrow, size: 18),
+                              onPressed: _startTimer,
+                              tooltip: 'Resume',
+                              color: Theme.of(context).colorScheme.primary,
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.refresh, size: 18),
+                              onPressed: _resetTimer,
+                              tooltip: 'Reset',
+                              color: Theme.of(context).colorScheme.secondary,
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  // Time display
+                  Text(
+                    _formatTime(_remainingSeconds),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color:
+                          _totalDuration == 0 && !_isCompleted
+                              ? Colors
+                                  .black87 // "Immediate" in black
+                              : _remainingSeconds <= 60 && _isRunning
+                              ? Colors.red
+                              : _remainingSeconds == 0
+                              ? Colors.green
+                              : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class HabitStatsScreen extends StatelessWidget {
+  final Habit habit;
+  final Map<String, List<Habit>> habitsByDate;
+  final Map<String, bool> habitCompletionStatus;
+  final String Function(DateTime) dateKey;
+
+  const HabitStatsScreen({
+    super.key,
+    required this.habit,
+    required this.habitsByDate,
+    required this.habitCompletionStatus,
+    required this.dateKey,
+  });
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  String _getWeekdayAbbreviation(int weekday) {
+    const abbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return abbreviations[weekday - 1];
+  }
+
+  List<Map<String, dynamic>> _getWeeklyStats() {
+    final today = DateTime.now();
+    final weekData = <Map<String, dynamic>>[];
+
+    for (int i = 6; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      final dateKey = this.dateKey(date);
+      final habits = habitsByDate[dateKey] ?? [];
+
+      // Find habits with the same name (this habit instance)
+      final habitInstances = habits.where((h) => h.name == habit.name).toList();
+      int completedCount = 0;
+
+      for (var h in habitInstances) {
+        if (habitCompletionStatus[h.id] == true) {
+          completedCount++;
+        }
+      }
+
+      weekData.add({
+        'date': date,
+        'completed': completedCount > 0,
+        'total': habitInstances.length,
+      });
+    }
+
+    return weekData;
+  }
+
+  List<Map<String, dynamic>> _getMonthlyStats() {
+    final today = DateTime.now();
+    final monthData = <Map<String, dynamic>>[];
+    final firstDayOfMonth = DateTime(today.year, today.month, 1);
+    final lastDayOfMonth = DateTime(today.year, today.month + 1, 0);
+
+    // Get the weekday of the first day (1 = Monday, 7 = Sunday)
+    // Adjust to start from Monday (0 = Monday, 6 = Sunday)
+    int firstWeekday = firstDayOfMonth.weekday - 1;
+
+    // Add empty cells for days before the first day of the month
+    for (int i = 0; i < firstWeekday; i++) {
+      monthData.add({
+        'date': null,
+        'completed': false,
+        'total': 0,
+        'isPlaceholder': true,
+      });
+    }
+
+    // Add all days of the month
+    for (int i = 1; i <= lastDayOfMonth.day; i++) {
+      final date = DateTime(today.year, today.month, i);
+      final dateKey = this.dateKey(date);
+      final habits = habitsByDate[dateKey] ?? [];
+
+      final habitInstances = habits.where((h) => h.name == habit.name).toList();
+      int completedCount = 0;
+
+      for (var h in habitInstances) {
+        if (habitCompletionStatus[h.id] == true) {
+          completedCount++;
+        }
+      }
+
+      monthData.add({
+        'date': date,
+        'completed': completedCount > 0,
+        'total': habitInstances.length,
+        'isPlaceholder': false,
+        'isFuture': date.isAfter(today),
+      });
+    }
+
+    return monthData;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final weeklyStats = _getWeeklyStats();
+    final monthlyStats = _getMonthlyStats();
+    final weeklyCompleted =
+        weeklyStats.where((d) => d['completed'] == true).length;
+    // Only count days up to today for monthly stats
+    final monthlyCompleted =
+        monthlyStats
+            .where(
+              (d) =>
+                  d['completed'] == true &&
+                  (d['isFuture'] as bool? ?? false) == false &&
+                  (d['isPlaceholder'] as bool? ?? false) == false,
+            )
+            .length;
+    final weeklyTotal = weeklyStats.length;
+    // Only count days up to today for monthly total
+    final monthlyTotal =
+        monthlyStats
+            .where(
+              (d) =>
+                  (d['isFuture'] as bool? ?? false) == false &&
+                  (d['isPlaceholder'] as bool? ?? false) == false,
+            )
+            .length;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: Text(
+          habit.name,
+          style: GoogleFonts.dancingScript(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        elevation: 2,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Summary Cards
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    'Weekly',
+                    '$weeklyCompleted/$weeklyTotal',
+                    Icons.calendar_view_week,
+                    weeklyTotal > 0 ? weeklyCompleted / weeklyTotal : 0,
+                  ),
                 ),
-                // Time display
-                Text(
-                  _formatTime(_remainingSeconds),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color:
-                        _totalDuration == 0 && !_isCompleted
-                            ? Colors
-                                .black87 // "Immediate" in black
-                            : _remainingSeconds <= 60 && _isRunning
-                            ? Colors.red
-                            : _remainingSeconds == 0
-                            ? Colors.green
-                            : Colors.black87,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    'Monthly',
+                    '$monthlyCompleted/$monthlyTotal',
+                    Icons.calendar_month,
+                    monthlyTotal > 0 ? monthlyCompleted / monthlyTotal : 0,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+
+            // Weekly Tracking
+            Text(
+              'Weekly Tracking',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Weekday headers
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children:
+                        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                            .map(
+                              (day) => Expanded(
+                                child: Center(
+                                  child: Text(
+                                    day,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  // Weekly calendar grid
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children:
+                        weeklyStats.map((day) {
+                          final isCompleted = day['completed'] as bool;
+                          final date = day['date'] as DateTime;
+                          final isToday = _isSameDay(date, DateTime.now());
+
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              child: Container(
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color:
+                                      isCompleted
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.primary
+                                          : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color:
+                                        isToday
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                            : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            _getWeekdayAbbreviation(
+                                              date.weekday,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  isCompleted
+                                                      ? Colors.white
+                                                      : Colors.grey[600],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${date.day}',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  isCompleted
+                                                      ? Colors.white
+                                                      : Colors.grey[700],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isCompleted)
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Icon(
+                                          Icons.check_circle,
+                                          size: 14,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Monthly Tracking
+            Text(
+              'Monthly Tracking',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Weekday headers
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children:
+                        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                            .map(
+                              (day) => Expanded(
+                                child: Center(
+                                  child: Text(
+                                    day,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  // Calendar grid
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 4,
+                          crossAxisSpacing: 4,
+                          childAspectRatio: 1,
+                        ),
+                    itemCount: monthlyStats.length,
+                    itemBuilder: (context, index) {
+                      final day = monthlyStats[index];
+                      final isPlaceholder =
+                          day['isPlaceholder'] as bool? ?? false;
+                      final date = day['date'] as DateTime?;
+                      final isCompleted = day['completed'] as bool;
+                      final isFuture = day['isFuture'] as bool? ?? false;
+                      final isToday =
+                          date != null && _isSameDay(date, DateTime.now());
+
+                      if (isPlaceholder || date == null) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color:
+                              isCompleted
+                                  ? Theme.of(context).colorScheme.primary
+                                  : isFuture
+                                  ? Colors.grey[100]
+                                  : Colors.grey[200],
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color:
+                                isToday
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: Text(
+                                '${date.day}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      isCompleted
+                                          ? Colors.white
+                                          : isFuture
+                                          ? Colors.grey[400]
+                                          : Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            if (isCompleted)
+                              Positioned(
+                                top: 2,
+                                right: 2,
+                                child: Icon(
+                                  Icons.check_circle,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    double progress,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

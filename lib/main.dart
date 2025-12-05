@@ -301,6 +301,240 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showHabitOptionsDialog(
+    String habitId,
+    String habitName,
+    int currentDuration,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Modify'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showModifyHabitDialog(habitId, habitName, currentDuration);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteHabit(habitId, habitName);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _deleteHabit(String id) {
+    setState(() {
+      // Find and remove habit from all dates
+      for (var habits in _habitsByDate.values) {
+        habits.removeWhere((habit) => habit.id == id);
+      }
+      _timerControllers[id]?.dispose();
+      _timerControllers.remove(id);
+      _remainingSeconds.remove(id);
+      _habitDurations.remove(id);
+      _habitCompletionStatus.remove(id);
+    });
+  }
+
+  void _confirmDeleteHabit(String id, String habitName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Habit'),
+          content: Text('Are you sure you want to delete "$habitName"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteHabit(id);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _modifyHabit(String id, String newName, int newDurationMinutes) {
+    setState(() {
+      final newDurationSeconds = newDurationMinutes * 60;
+
+      // Find the original habit
+      Habit? originalHabit;
+      for (var entry in _habitsByDate.entries) {
+        try {
+          originalHabit = entry.value.firstWhere((habit) => habit.id == id);
+          break;
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (originalHabit == null) return;
+
+      final originalName = originalHabit.name;
+
+      // Update all habits with the same original name across all dates
+      for (var entry in _habitsByDate.entries) {
+        final habits = entry.value;
+        for (int i = 0; i < habits.length; i++) {
+          final habit = habits[i];
+          // Update habits that match the original name
+          if (habit.name == originalName) {
+            // Update the habit's name and duration
+            final updatedHabit = Habit(
+              id: habit.id, // Keep the same ID
+              name: newName,
+              createdAt: habit.createdAt,
+              durationMinutes: newDurationMinutes,
+              date: habit.date,
+            );
+
+            // Update duration and remaining seconds if not completed
+            if (!(_habitCompletionStatus[habit.id] ?? false)) {
+              _habitDurations[habit.id] = newDurationSeconds;
+              _remainingSeconds[habit.id] = newDurationSeconds;
+            }
+
+            habits[i] = updatedHabit;
+          }
+        }
+      }
+    });
+  }
+
+  void _showModifyHabitDialog(
+    String habitId,
+    String currentName,
+    int currentDuration,
+  ) {
+    final TextEditingController nameController = TextEditingController(
+      text: currentName,
+    );
+    int selectedDuration = currentDuration;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Modify Habit'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter habit name',
+                        border: OutlineInputBorder(),
+                        labelText: 'Habit Name',
+                      ),
+                      autofocus: true,
+                      onSubmitted: (_) {
+                        if (nameController.text.trim().isNotEmpty) {
+                          _modifyHabit(
+                            habitId,
+                            nameController.text.trim(),
+                            selectedDuration,
+                          );
+                          Navigator.of(dialogContext).pop();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Duration:',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      value: selectedDuration,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Select Duration',
+                      ),
+                      items: [
+                        const DropdownMenuItem<int>(
+                          value: 0,
+                          child: Text('Immed.'),
+                        ),
+                        ...([1, 2, 3, 4, 5].map((minutes) {
+                          return DropdownMenuItem<int>(
+                            value: minutes,
+                            child: Text(
+                              '$minutes minute${minutes > 1 ? 's' : ''}',
+                            ),
+                          );
+                        })),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedDuration = value;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (nameController.text.trim().isNotEmpty) {
+                      _modifyHabit(
+                        habitId,
+                        nameController.text.trim(),
+                        selectedDuration,
+                      );
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -497,6 +731,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             });
                           },
                           onTap: () => _showHabitStats(_currentHabits[index]),
+                          onLongPress:
+                              () => _showHabitOptionsDialog(
+                                _currentHabits[index].id,
+                                _currentHabits[index].name,
+                                _currentHabits[index].durationMinutes,
+                              ),
                         ),
                     ],
                   ),
@@ -782,6 +1022,7 @@ class HabitCard extends StatefulWidget {
   final Function(int) onTimeUpdate;
   final Function(bool) onCompletionChanged;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   const HabitCard({
     super.key,
@@ -793,6 +1034,7 @@ class HabitCard extends StatefulWidget {
     required this.onTimeUpdate,
     required this.onCompletionChanged,
     this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -948,6 +1190,7 @@ class _HabitCardState extends State<HabitCard> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: Stack(
           children: [
             // Color fill based on progress
@@ -1087,7 +1330,7 @@ class _HabitCardState extends State<HabitCard> {
   }
 }
 
-class HabitStatsScreen extends StatelessWidget {
+class HabitStatsScreen extends StatefulWidget {
   final Habit habit;
   final Map<String, List<Habit>> habitsByDate;
   final Map<String, bool> habitCompletionStatus;
@@ -1100,6 +1343,13 @@ class HabitStatsScreen extends StatelessWidget {
     required this.habitCompletionStatus,
     required this.dateKey,
   });
+
+  @override
+  State<HabitStatsScreen> createState() => _HabitStatsScreenState();
+}
+
+class _HabitStatsScreenState extends State<HabitStatsScreen> {
+  DateTime _selectedMonth = DateTime.now();
 
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
@@ -1118,15 +1368,16 @@ class HabitStatsScreen extends StatelessWidget {
 
     for (int i = 6; i >= 0; i--) {
       final date = today.subtract(Duration(days: i));
-      final dateKey = this.dateKey(date);
-      final habits = habitsByDate[dateKey] ?? [];
+      final dateKey = widget.dateKey(date);
+      final habits = widget.habitsByDate[dateKey] ?? [];
 
       // Find habits with the same name (this habit instance)
-      final habitInstances = habits.where((h) => h.name == habit.name).toList();
+      final habitInstances =
+          habits.where((h) => h.name == widget.habit.name).toList();
       int completedCount = 0;
 
       for (var h in habitInstances) {
-        if (habitCompletionStatus[h.id] == true) {
+        if (widget.habitCompletionStatus[h.id] == true) {
           completedCount++;
         }
       }
@@ -1144,8 +1395,16 @@ class HabitStatsScreen extends StatelessWidget {
   List<Map<String, dynamic>> _getMonthlyStats() {
     final today = DateTime.now();
     final monthData = <Map<String, dynamic>>[];
-    final firstDayOfMonth = DateTime(today.year, today.month, 1);
-    final lastDayOfMonth = DateTime(today.year, today.month + 1, 0);
+    final firstDayOfMonth = DateTime(
+      _selectedMonth.year,
+      _selectedMonth.month,
+      1,
+    );
+    final lastDayOfMonth = DateTime(
+      _selectedMonth.year,
+      _selectedMonth.month + 1,
+      0,
+    );
 
     // Get the weekday of the first day (1 = Monday, 7 = Sunday)
     // Adjust to start from Monday (0 = Monday, 6 = Sunday)
@@ -1163,15 +1422,16 @@ class HabitStatsScreen extends StatelessWidget {
 
     // Add all days of the month
     for (int i = 1; i <= lastDayOfMonth.day; i++) {
-      final date = DateTime(today.year, today.month, i);
-      final dateKey = this.dateKey(date);
-      final habits = habitsByDate[dateKey] ?? [];
+      final date = DateTime(_selectedMonth.year, _selectedMonth.month, i);
+      final dateKey = widget.dateKey(date);
+      final habits = widget.habitsByDate[dateKey] ?? [];
 
-      final habitInstances = habits.where((h) => h.name == habit.name).toList();
+      final habitInstances =
+          habits.where((h) => h.name == widget.habit.name).toList();
       int completedCount = 0;
 
       for (var h in habitInstances) {
-        if (habitCompletionStatus[h.id] == true) {
+        if (widget.habitCompletionStatus[h.id] == true) {
           completedCount++;
         }
       }
@@ -1186,6 +1446,24 @@ class HabitStatsScreen extends StatelessWidget {
     }
 
     return monthData;
+  }
+
+  String _getMonthName(DateTime date) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${months[date.month - 1]} ${date.year}';
   }
 
   @override
@@ -1219,7 +1497,7 @@ class HabitStatsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
         title: Text(
-          habit.name,
+          widget.habit.name,
           style: GoogleFonts.dancingScript(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -1397,12 +1675,55 @@ class HabitStatsScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Monthly Tracking
-            Text(
-              'Monthly Tracking',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Monthly Tracking',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                // Month navigation
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () {
+                        setState(() {
+                          _selectedMonth = DateTime(
+                            _selectedMonth.year,
+                            _selectedMonth.month - 1,
+                            1,
+                          );
+                        });
+                      },
+                      tooltip: 'Previous month',
+                    ),
+                    Text(
+                      _getMonthName(_selectedMonth),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () {
+                        setState(() {
+                          _selectedMonth = DateTime(
+                            _selectedMonth.year,
+                            _selectedMonth.month + 1,
+                            1,
+                          );
+                        });
+                      },
+                      tooltip: 'Next month',
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Container(

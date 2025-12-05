@@ -315,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('Modify'),
+                title: const Text('Edit'),
                 onTap: () {
                   Navigator.pop(context);
                   _showModifyHabitDialog(habitId, habitName, currentDuration);
@@ -444,7 +444,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Modify Habit'),
+              title: const Text('Edit Habit'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

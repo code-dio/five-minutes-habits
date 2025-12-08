@@ -1675,8 +1675,8 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
             const SizedBox(height: 24),
 
             // Monthly Tracking
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Monthly Tracking',
@@ -1685,43 +1685,45 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
+                const SizedBox(height: 8),
                 // Month navigation
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: () {
-                        setState(() {
-                          _selectedMonth = DateTime(
-                            _selectedMonth.year,
-                            _selectedMonth.month - 1,
-                            1,
-                          );
-                        });
-                      },
-                      tooltip: 'Previous month',
-                    ),
-                    Text(
-                      _getMonthName(_selectedMonth),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: () {
+                          setState(() {
+                            _selectedMonth = DateTime(
+                              _selectedMonth.year,
+                              _selectedMonth.month - 1,
+                              1,
+                            );
+                          });
+                        },
+                        tooltip: 'Previous month',
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: () {
-                        setState(() {
-                          _selectedMonth = DateTime(
-                            _selectedMonth.year,
-                            _selectedMonth.month + 1,
-                            1,
-                          );
-                        });
-                      },
-                      tooltip: 'Next month',
-                    ),
-                  ],
+                      Text(
+                        _getMonthName(_selectedMonth),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: () {
+                          setState(() {
+                            _selectedMonth = DateTime(
+                              _selectedMonth.year,
+                              _selectedMonth.month + 1,
+                              1,
+                            );
+                          });
+                        },
+                        tooltip: 'Next month',
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

@@ -589,13 +589,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Show today and previous 6 days (7 days total)
+              // Show 7 days with selected date in the center (3 before, selected, 3 after)
               final today = DateTime.now();
 
               return Row(
                 children: List.generate(7, (index) {
-                  // Show 6 days ago to today (index 0 = 6 days ago, index 6 = today)
-                  final date = today.subtract(Duration(days: 6 - index));
+                  // Show 3 days before selected date to 3 days after (selected date in center at index 3)
+                  final date = _selectedDate.subtract(
+                    Duration(days: 3 - index),
+                  );
                   final isSelected = _isSameDay(date, _selectedDate);
                   final isToday = _isSameDay(date, today);
 

@@ -392,7 +392,10 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Delete Habit'),
-          content: Text('Are you sure you want to delete "$habitName"?'),
+          content: Text(
+            'Are you sure you want to delete "$habitName"?\n\n'
+            'Warning: This will remove the habit from all dates and delete all of its history.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),

@@ -1507,6 +1507,115 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
     return '${months[date.month - 1]} ${date.year}';
   }
 
+  void _showMonthYearPicker() {
+    final currentYear = _selectedMonth.year;
+    final currentMonth = _selectedMonth.month;
+    int selectedYear = currentYear;
+    int selectedMonth = currentMonth;
+
+    final now = DateTime.now();
+    final years =
+        List.generate(
+          now.year - 1999,
+          (index) => 2000 + index,
+        ).reversed.toList();
+
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Select Month and Year'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Month dropdown
+                    DropdownButtonFormField<int>(
+                      value: selectedMonth,
+                      decoration: const InputDecoration(
+                        labelText: 'Month',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: List.generate(12, (index) {
+                        return DropdownMenuItem<int>(
+                          value: index + 1,
+                          child: Text(months[index]),
+                        );
+                      }),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedMonth = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Year dropdown
+                    DropdownButtonFormField<int>(
+                      value: selectedYear,
+                      decoration: const InputDecoration(
+                        labelText: 'Year',
+                        border: OutlineInputBorder(),
+                      ),
+                      items:
+                          years.map((year) {
+                            return DropdownMenuItem<int>(
+                              value: year,
+                              child: Text(year.toString()),
+                            );
+                          }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedYear = value;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedMonth = DateTime(selectedYear, selectedMonth, 1);
+                    });
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Select'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final weeklyStats = _getWeeklyStats();
@@ -1745,10 +1854,31 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
                         },
                         tooltip: 'Previous month',
                       ),
-                      Text(
-                        _getMonthName(_selectedMonth),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                      GestureDetector(
+                        onTap: _showMonthYearPicker,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            _getMonthName(_selectedMonth),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.chevron_right),

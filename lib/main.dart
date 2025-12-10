@@ -86,6 +86,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final creationTime = DateTime.now().millisecondsSinceEpoch;
     final durationSeconds = durationMinutes * 60;
+    // Generate unique habit ID that will be shared across all instances
+    final uniqueHabitId = '${name.trim()}-$creationTime';
 
     setState(() {
       // Add habit to all days from the selected date onwards (next 365 days)
@@ -95,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final habit = Habit(
           id: '$dateKey-${name.trim()}-$creationTime-$i',
+          uniqueHabitId: uniqueHabitId,
           name: name.trim(),
           createdAt: DateTime.now(),
           durationMinutes: durationMinutes,
@@ -342,15 +345,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _deleteHabit(String id) {
     setState(() {
-      // Find and remove habit from all dates
-      for (var habits in _habitsByDate.values) {
-        habits.removeWhere((habit) => habit.id == id);
+      // Find the original habit to get its unique habit ID
+      Habit? originalHabit;
+      for (var entry in _habitsByDate.entries) {
+        try {
+          originalHabit = entry.value.firstWhere((habit) => habit.id == id);
+          break;
+        } catch (e) {
+          continue;
+        }
       }
-      _timerControllers[id]?.dispose();
-      _timerControllers.remove(id);
-      _remainingSeconds.remove(id);
-      _habitDurations.remove(id);
-      _habitCompletionStatus.remove(id);
+
+      if (originalHabit == null) return;
+
+      final uniqueHabitId = originalHabit.uniqueHabitId;
+
+      // Collect all habit IDs to clean up
+      final idsToRemove = <String>[];
+
+      // Remove all habits with the same unique habit ID from all dates
+      for (var entry in _habitsByDate.entries) {
+        final habits = entry.value;
+        habits.removeWhere((habit) {
+          if (habit.uniqueHabitId == uniqueHabitId) {
+            idsToRemove.add(habit.id);
+            return true;
+          }
+          return false;
+        });
+      }
+
+      // Clean up all related data for all matching habit IDs
+      for (var habitId in idsToRemove) {
+        _timerControllers[habitId]?.dispose();
+        _timerControllers.remove(habitId);
+        _remainingSeconds.remove(habitId);
+        _habitDurations.remove(habitId);
+        _habitCompletionStatus.remove(habitId);
+      }
     });
   }
 
@@ -397,18 +429,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (originalHabit == null) return;
 
-      final originalName = originalHabit.name;
+      final uniqueHabitId = originalHabit.uniqueHabitId;
 
-      // Update all habits with the same original name across all dates
+      // Update all habits with the same unique habit ID across all dates
       for (var entry in _habitsByDate.entries) {
         final habits = entry.value;
         for (int i = 0; i < habits.length; i++) {
           final habit = habits[i];
-          // Update habits that match the original name
-          if (habit.name == originalName) {
+          // Update habits that match the unique habit ID
+          if (habit.uniqueHabitId == uniqueHabitId) {
             // Update the habit's name and duration
             final updatedHabit = Habit(
               id: habit.id, // Keep the same ID
+              uniqueHabitId:
+                  habit.uniqueHabitId, // Keep the same unique habit ID
               name: newName,
               createdAt: habit.createdAt,
               durationMinutes: newDurationMinutes,
@@ -1373,9 +1407,11 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
       final dateKey = widget.dateKey(date);
       final habits = widget.habitsByDate[dateKey] ?? [];
 
-      // Find habits with the same name (this habit instance)
+      // Find habits with the same unique habit ID (this habit instance)
       final habitInstances =
-          habits.where((h) => h.name == widget.habit.name).toList();
+          habits
+              .where((h) => h.uniqueHabitId == widget.habit.uniqueHabitId)
+              .toList();
       int completedCount = 0;
 
       for (var h in habitInstances) {

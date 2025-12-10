@@ -1,5 +1,6 @@
 class Habit {
   final String id;
+  final String uniqueHabitId; // Unique ID shared across all instances of the same habit
   final String name;
   final DateTime createdAt;
   final int durationMinutes; // Duration in minutes (1-5)
@@ -7,6 +8,7 @@ class Habit {
 
   Habit({
     required this.id,
+    required this.uniqueHabitId,
     required this.name,
     required this.createdAt,
     required this.durationMinutes,
@@ -15,6 +17,7 @@ class Habit {
 
   Habit copyWith({
     String? id,
+    String? uniqueHabitId,
     String? name,
     DateTime? createdAt,
     int? durationMinutes,
@@ -22,6 +25,7 @@ class Habit {
   }) {
     return Habit(
       id: id ?? this.id,
+      uniqueHabitId: uniqueHabitId ?? this.uniqueHabitId,
       name: name ?? this.name,
       createdAt: createdAt ?? this.createdAt,
       durationMinutes: durationMinutes ?? this.durationMinutes,

@@ -1661,32 +1661,6 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Summary Cards
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    context,
-                    'Weekly',
-                    '$weeklyCompleted/$weeklyTotal',
-                    Icons.calendar_view_week,
-                    weeklyTotal > 0 ? weeklyCompleted / weeklyTotal : 0,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(
-                    context,
-                    'Monthly',
-                    '$monthlyCompleted/$monthlyTotal',
-                    Icons.calendar_month,
-                    monthlyTotal > 0 ? monthlyCompleted / monthlyTotal : 0,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
             // Weekly Tracking
             Text(
               'Weekly Tracking',
@@ -2013,6 +1987,32 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // Summary Cards
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    'Weekly',
+                    '$weeklyCompleted/$weeklyTotal',
+                    Icons.calendar_view_week,
+                    weeklyTotal > 0 ? weeklyCompleted / weeklyTotal : 0,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    'Monthly',
+                    '$monthlyCompleted/$monthlyTotal',
+                    Icons.calendar_month,
+                    monthlyTotal > 0 ? monthlyCompleted / monthlyTotal : 0,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

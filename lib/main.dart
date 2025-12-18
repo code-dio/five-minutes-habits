@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'models/habit.dart';
+import 'services/habit_storage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -73,12 +74,78 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadHabits();
+  }
+
+  @override
   void dispose() {
+    // Save habits before disposing
+    _saveHabits();
     // Dispose all timers
     for (var controller in _timerControllers.values) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  // Load habits from local storage
+  Future<void> _loadHabits() async {
+    try {
+      final data = await HabitStorage.loadHabitsData();
+
+      setState(() {
+        _habitsByDate.clear();
+        _remainingSeconds.clear();
+        _habitDurations.clear();
+        _habitCompletionStatus.clear();
+        _timerControllers.clear();
+
+        // Load habits by date
+        final habitsByDate = data['habitsByDate'] as Map<String, List<Habit>>;
+        _habitsByDate.addAll(habitsByDate);
+
+        // Load remaining seconds
+        final remainingSeconds = data['remainingSeconds'] as Map<String, int>;
+        _remainingSeconds.addAll(remainingSeconds);
+
+        // Load habit durations
+        final habitDurations = data['habitDurations'] as Map<String, int>;
+        _habitDurations.addAll(habitDurations);
+
+        // Load completion status
+        final habitCompletionStatus =
+            data['habitCompletionStatus'] as Map<String, bool>;
+        _habitCompletionStatus.addAll(habitCompletionStatus);
+
+        // Initialize timer controllers for all habits
+        for (var habits in _habitsByDate.values) {
+          for (var habit in habits) {
+            if (!_timerControllers.containsKey(habit.id)) {
+              _timerControllers[habit.id] = TimerController();
+            }
+          }
+        }
+      });
+    } catch (e) {
+      // If loading fails, start with empty data
+      debugPrint('Error loading habits: $e');
+    }
+  }
+
+  // Save habits to local storage
+  Future<void> _saveHabits() async {
+    try {
+      await HabitStorage.saveHabitsData(
+        habitsByDate: _habitsByDate,
+        remainingSeconds: _remainingSeconds,
+        habitDurations: _habitDurations,
+        habitCompletionStatus: _habitCompletionStatus,
+      );
+    } catch (e) {
+      debugPrint('Error saving habits: $e');
+    }
   }
 
   void _addHabit(String name, int durationMinutes) {
@@ -111,6 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _habitCompletionStatus[habit.id] = false; // Initially not completed
       }
     });
+    _saveHabits();
   }
 
   void _reorderHabits(int oldIndex, int newIndex) {
@@ -384,6 +452,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _habitCompletionStatus.remove(habitId);
       }
     });
+    _saveHabits();
   }
 
   void _confirmDeleteHabit(String id, String habitName) {
@@ -463,6 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     });
+    _saveHabits();
   }
 
   void _showModifyHabitDialog(
@@ -768,6 +838,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               _habitCompletionStatus[_currentHabits[index].id] =
                                   isCompleted;
                             });
+                            _saveHabits();
                           },
                           onTap: () => _showHabitStats(_currentHabits[index]),
                           onLongPress:

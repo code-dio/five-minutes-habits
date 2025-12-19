@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
           secondary: const Color(0xFF1C7549), // Accent Green
           tertiary: const Color(0xFF35855D), // Light Green
           surface: Colors.white,
-          background: const Color(0xFFF5F5F5), // Light gray background
+          background: const Color(0xFFFAFAFA), // Softer background
           error: Colors.red,
           onPrimary: Colors.white,
           onSecondary: Colors.white,
@@ -29,14 +29,41 @@ class MyApp extends StatelessWidget {
           onError: Colors.white,
         ),
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF00704A), // Starbucks Green
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
           elevation: 0,
+          centerTitle: true,
         ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFF00704A), // Starbucks Green
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: const Color(0xFF00704A),
           foregroundColor: Colors.white,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        cardTheme: CardTheme(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF00704A), width: 2),
+          ),
         ),
       ),
       home: const HomeScreen(),
@@ -245,86 +272,205 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Add New Habit'),
-              content: SingleChildScrollView(
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter habit name',
-                        border: OutlineInputBorder(),
-                        labelText: 'Habit Name',
-                      ),
-                      autofocus: true,
-                      onSubmitted: (_) {
-                        if (nameController.text.trim().isNotEmpty) {
-                          _addHabit(
-                            nameController.text.trim(),
-                            selectedDuration,
-                          );
-                          Navigator.of(dialogContext).pop();
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Duration:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<int>(
-                      value: selectedDuration,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: 'Select Duration',
-                      ),
-                      items: [
-                        const DropdownMenuItem<int>(
-                          value: 0,
-                          child: Text('Immed.'),
+                    // Header with gradient
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF00704A), Color(0xFF1C7549)],
                         ),
-                        ...([1, 2, 3, 4, 5].map((minutes) {
-                          return DropdownMenuItem<int>(
-                            value: minutes,
-                            child: Text(
-                              '$minutes minute${minutes > 1 ? 's' : ''}',
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        })),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setDialogState(() {
-                            selectedDuration = value;
-                          });
-                        }
-                      },
+                            child: const Icon(
+                              Icons.add_circle_outline,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Add New Habit',
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextField(
+                              controller: nameController,
+                              decoration: InputDecoration(
+                                hintText: 'Enter habit name',
+                                labelText: 'Habit Name',
+                                prefixIcon: const Icon(Icons.fitness_center),
+                              ),
+                              autofocus: true,
+                              onSubmitted: (_) {
+                                if (nameController.text.trim().isNotEmpty) {
+                                  _addHabit(
+                                    nameController.text.trim(),
+                                    selectedDuration,
+                                  );
+                                  Navigator.of(dialogContext).pop();
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Duration:',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<int>(
+                              value: selectedDuration,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Duration',
+                                prefixIcon: Icon(Icons.timer),
+                              ),
+                              items: [
+                                const DropdownMenuItem<int>(
+                                  value: 0,
+                                  child: Text('Immed.'),
+                                ),
+                                ...([1, 2, 3, 4, 5].map((minutes) {
+                                  return DropdownMenuItem<int>(
+                                    value: minutes,
+                                    child: Text(
+                                      '$minutes minute${minutes > 1 ? 's' : ''}',
+                                    ),
+                                  );
+                                })),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setDialogState(() {
+                                    selectedDuration = value;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Actions
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(24),
+                          bottomRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF00704A), Color(0xFF1C7549)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                if (nameController.text.trim().isNotEmpty) {
+                                  _addHabit(
+                                    nameController.text.trim(),
+                                    selectedDuration,
+                                  );
+                                  Navigator.of(dialogContext).pop();
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: Text(
+                                'Add',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (nameController.text.trim().isNotEmpty) {
-                      _addHabit(nameController.text.trim(), selectedDuration);
-                      Navigator.of(dialogContext).pop();
-                    }
-                  },
-                  child: const Text('Add'),
-                ),
-              ],
             );
           },
         );
@@ -379,32 +525,77 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Edit'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showModifyHabitDialog(habitId, habitName, currentDuration);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text(
-                  'Delete',
-                  style: TextStyle(color: Colors.red),
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmDeleteHabit(habitId, habitName);
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00704A), Color(0xFF1C7549)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Edit',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showModifyHabitDialog(habitId, habitName, currentDuration);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.delete, color: Colors.red[700], size: 20),
+                  ),
+                  title: Text(
+                    'Delete',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmDeleteHabit(habitId, habitName);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },
@@ -459,26 +650,139 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Habit'),
-          content: Text(
-            'Are you sure you want to delete "$habitName"?\n\n'
-            'Warning: This will remove the habit from all dates and delete all of its history.',
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _deleteHabit(id);
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red[700],
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Delete Habit',
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Are you sure you want to delete "$habitName"?\n\n'
+                    'Warning: This will remove the habit from all dates and delete all of its history.',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: Colors.grey[700],
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.red[600],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _deleteHabit(id);
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: Text(
+                            'Delete',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -550,91 +854,207 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Edit Habit'),
-              content: SingleChildScrollView(
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter habit name',
-                        border: OutlineInputBorder(),
-                        labelText: 'Habit Name',
-                      ),
-                      autofocus: true,
-                      onSubmitted: (_) {
-                        if (nameController.text.trim().isNotEmpty) {
-                          _modifyHabit(
-                            habitId,
-                            nameController.text.trim(),
-                            selectedDuration,
-                          );
-                          Navigator.of(dialogContext).pop();
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Duration:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<int>(
-                      value: selectedDuration,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: 'Select Duration',
-                      ),
-                      items: [
-                        const DropdownMenuItem<int>(
-                          value: 0,
-                          child: Text('Immed.'),
+                    // Header with gradient
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF00704A), Color(0xFF1C7549)],
                         ),
-                        ...([1, 2, 3, 4, 5].map((minutes) {
-                          return DropdownMenuItem<int>(
-                            value: minutes,
-                            child: Text(
-                              '$minutes minute${minutes > 1 ? 's' : ''}',
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        })),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setDialogState(() {
-                            selectedDuration = value;
-                          });
-                        }
-                      },
+                            child: const Icon(
+                              Icons.edit_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Edit Habit',
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextField(
+                              controller: nameController,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter habit name',
+                                labelText: 'Habit Name',
+                                prefixIcon: Icon(Icons.fitness_center),
+                              ),
+                              autofocus: true,
+                              onSubmitted: (_) {
+                                if (nameController.text.trim().isNotEmpty) {
+                                  _modifyHabit(
+                                    habitId,
+                                    nameController.text.trim(),
+                                    selectedDuration,
+                                  );
+                                  Navigator.of(dialogContext).pop();
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Duration:',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<int>(
+                              value: selectedDuration,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Duration',
+                                prefixIcon: Icon(Icons.timer),
+                              ),
+                              items: [
+                                const DropdownMenuItem<int>(
+                                  value: 0,
+                                  child: Text('Immed.'),
+                                ),
+                                ...([1, 2, 3, 4, 5].map((minutes) {
+                                  return DropdownMenuItem<int>(
+                                    value: minutes,
+                                    child: Text(
+                                      '$minutes minute${minutes > 1 ? 's' : ''}',
+                                    ),
+                                  );
+                                })),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setDialogState(() {
+                                    selectedDuration = value;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Actions
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(24),
+                          bottomRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF00704A), Color(0xFF1C7549)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                if (nameController.text.trim().isNotEmpty) {
+                                  _modifyHabit(
+                                    habitId,
+                                    nameController.text.trim(),
+                                    selectedDuration,
+                                  );
+                                  Navigator.of(dialogContext).pop();
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: Text(
+                                'Save',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (nameController.text.trim().isNotEmpty) {
-                      _modifyHabit(
-                        habitId,
-                        nameController.text.trim(),
-                        selectedDuration,
-                      );
-                      Navigator.of(dialogContext).pop();
-                    }
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
             );
           },
         );
@@ -645,34 +1065,98 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        title: Text(
-          'Five Minute Habits',
-          style: GoogleFonts.dancingScript(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+      extendBodyBehindAppBar: false,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF00704A),
+                const Color(0xFF1C7549),
+                const Color(0xFF35855D),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            title: Text(
+              'Five Minute Habits',
+              style: GoogleFonts.dancingScript(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 1.2,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.2),
+                    offset: const Offset(0, 2),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+            elevation: 0,
+            actions: [
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.calendar_month),
+                  onPressed: _showCalendarDialog,
+                  tooltip: 'Select Date',
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
         ),
-        elevation: 2,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month),
-            onPressed: _showCalendarDialog,
-            tooltip: 'Select Date',
-          ),
-        ],
       ),
       body: Container(
-        color: Theme.of(context).colorScheme.background,
-        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Theme.of(context).colorScheme.background, Colors.white],
+          ),
+        ),
         child: _buildHabitsTab(),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddHabitDialog,
-        tooltip: 'Add Habit',
-        child: const Icon(Icons.add),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF00704A), Color(0xFF1C7549)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00704A).withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: _showAddHabitDialog,
+          tooltip: 'Add Habit',
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: const Icon(Icons.add, size: 28),
+        ),
       ),
     );
   }
@@ -682,15 +1166,19 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         // Date selector - always visible, horizontally scrollable (7 days visible)
         Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          height: 90,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.white, Colors.white.withOpacity(0.95)],
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -715,49 +1203,80 @@ class _HomeScreenState extends State<HomeScreen> {
                           _selectedDate = date;
                         });
                       },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
                         decoration: BoxDecoration(
+                          gradient:
+                              isSelected
+                                  ? LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      const Color(0xFF00704A),
+                                      const Color(0xFF1C7549),
+                                    ],
+                                  )
+                                  : null,
                           color:
                               isSelected
-                                  ? Theme.of(context).colorScheme.primary
+                                  ? null
                                   : isToday && !isSelected
                                   ? Theme.of(
                                     context,
                                   ).colorScheme.primary.withOpacity(0.1)
                                   : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color:
                                 isToday
                                     ? Theme.of(context).colorScheme.primary
-                                    : Colors.grey[300]!,
-                            width: isToday ? 2 : 1,
+                                    : isSelected
+                                    ? Colors.transparent
+                                    : Colors.grey[200]!,
+                            width:
+                                isToday
+                                    ? 2.5
+                                    : isSelected
+                                    ? 0
+                                    : 1,
                           ),
+                          boxShadow:
+                              isSelected
+                                  ? [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF00704A,
+                                      ).withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                  : null,
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               _getWeekdayAbbreviation(date.weekday),
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
                                 color:
                                     isSelected
                                         ? Colors.white
                                         : isToday
                                         ? Theme.of(context).colorScheme.primary
                                         : Colors.grey[600],
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               '${date.day}',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.titleMedium?.copyWith(
+                              style: GoogleFonts.inter(
+                                fontSize: 20,
                                 color:
                                     isSelected
                                         ? Colors.white
@@ -785,22 +1304,41 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.fitness_center,
-                          size: 64,
-                          color: Colors.grey[400],
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color(0xFF00704A).withOpacity(0.1),
+                                const Color(0xFF1C7549).withOpacity(0.05),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.fitness_center,
+                            size: 80,
+                            color: const Color(0xFF00704A).withOpacity(0.6),
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 24),
                         Text(
                           'No habits yet',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(color: Colors.grey[600]),
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Tap the + button to add a habit',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: Colors.grey[500]),
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            color: Colors.grey[500],
+                          ),
                         ),
                       ],
                     ),
@@ -1248,18 +1786,96 @@ class _HabitCardState extends State<HabitCard> {
   void _showCompletionDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Habit Complete! 🎉'),
-          content: Text('Great job completing "${widget.habit.name}"!'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1C7549), Color(0xFF35855D)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1C7549).withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ],
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      size: 64,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Habit Complete! 🎉',
+                    style: GoogleFonts.inter(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Great job completing "${widget.habit.name}"!',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 14,
+                        ),
+                      ),
+                      child: Text(
+                        'OK',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1C7549),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
@@ -1285,155 +1901,295 @@ class _HabitCardState extends State<HabitCard> {
   @override
   Widget build(BuildContext context) {
     final progress = _getProgress();
-    final fillColor =
-        _remainingSeconds > 0
-            ? const Color(0xFF00704A).withOpacity(
-              0.15,
-            ) // Starbucks Green with opacity
-            : const Color(
-              0xFF1C7549,
-            ).withOpacity(0.2); // Accent Green with opacity
+    final isCompleted = _isCompleted;
+    final isRunning = _isRunning;
 
-    return Card(
-      margin: const EdgeInsets.only(left: 8, right: 8, top: 1, bottom: 2),
-      elevation: 2,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
-        child: Stack(
-          children: [
-            // Color fill based on progress
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: progress,
-                  child: Container(color: fillColor),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        gradient:
+            isCompleted
+                ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF1C7549).withOpacity(0.15),
+                    const Color(0xFF35855D).withOpacity(0.1),
+                  ],
+                )
+                : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.white, Colors.white.withOpacity(0.95)],
                 ),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Habit name (title)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        widget.habit.name,
-                        textAlign: TextAlign.left,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          decoration:
-                              _isCompleted ? TextDecoration.lineThrough : null,
-                          color:
-                              _isCompleted
-                                  ? Colors.grey
-                                  : Theme.of(
-                                    context,
-                                  ).textTheme.titleLarge?.color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color:
+              isCompleted
+                  ? const Color(0xFF1C7549).withOpacity(0.3)
+                  : Colors.grey[200]!,
+          width: isCompleted ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color:
+                isCompleted
+                    ? const Color(0xFF1C7549).withOpacity(0.2)
+                    : Colors.black.withOpacity(0.06),
+            blurRadius: isCompleted ? 12 : 8,
+            offset: Offset(0, isCompleted ? 6 : 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              // Progress gradient fill
+              if (progress > 0 && !isCompleted)
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: progress,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF00704A).withOpacity(0.2),
+                              const Color(0xFF1C7549).withOpacity(0.15),
+                            ],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            bottomLeft: Radius.circular(16),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  // Buttons
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Timer controls
-                      if (_isCompleted)
-                        // Cancel/Undo button for completed habits
-                        IconButton(
-                          icon: const Icon(Icons.undo, size: 18),
-                          onPressed: _resetTimer,
-                          tooltip: 'Cancel',
-                          color: Theme.of(context).colorScheme.secondary,
-                          padding: const EdgeInsets.all(6),
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                        )
-                      else if (!_isRunning &&
-                          _remainingSeconds == _totalDuration)
-                        IconButton(
-                          icon: const Icon(Icons.play_arrow, size: 18),
-                          onPressed: _startTimer,
-                          tooltip: 'Start',
-                          color: Theme.of(context).colorScheme.primary,
-                          padding: const EdgeInsets.all(6),
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                        )
-                      else if (_isRunning)
-                        IconButton(
-                          icon: const Icon(Icons.pause, size: 18),
-                          onPressed: _stopTimer,
-                          tooltip: 'Pause',
-                          color: Theme.of(context).colorScheme.primary,
-                          padding: const EdgeInsets.all(6),
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                        )
-                      else
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.play_arrow, size: 18),
-                              onPressed: _startTimer,
-                              tooltip: 'Resume',
-                              color: Theme.of(context).colorScheme.primary,
+                ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Habit name (title)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          if (isCompleted)
+                            Container(
+                              margin: const EdgeInsets.only(right: 12),
                               padding: const EdgeInsets.all(6),
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF1C7549),
+                                    Color(0xFF35855D),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 16,
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.refresh, size: 18),
-                              onPressed: _resetTimer,
-                              tooltip: 'Reset',
-                              color: Theme.of(context).colorScheme.secondary,
-                              padding: const EdgeInsets.all(6),
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
+                          Expanded(
+                            child: Text(
+                              widget.habit.name,
+                              textAlign: TextAlign.left,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                decoration:
+                                    isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                color:
+                                    isCompleted
+                                        ? Colors.grey[600]
+                                        : Colors.black87,
+                                letterSpacing: 0.2,
                               ),
                             ),
-                          ],
-                        ),
-                    ],
-                  ),
-                  // Time display
-                  Text(
-                    _formatTime(_remainingSeconds),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color:
-                          _totalDuration == 0 && !_isCompleted
-                              ? Colors
-                                  .black87 // "Immediate" in black
-                              : _remainingSeconds <= 60 && _isRunning
-                              ? Colors.red
-                              : _remainingSeconds == 0
-                              ? Colors.green
-                              : Colors.black87,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    // Buttons
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Timer controls
+                        if (isCompleted)
+                          // Cancel/Undo button for completed habits
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.undo, size: 18),
+                              onPressed: _resetTimer,
+                              tooltip: 'Cancel',
+                              color: Colors.grey[700],
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                            ),
+                          )
+                        else if (!isRunning &&
+                            _remainingSeconds == _totalDuration)
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF00704A), Color(0xFF1C7549)],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF00704A,
+                                  ).withOpacity(0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.play_arrow, size: 20),
+                              onPressed: _startTimer,
+                              tooltip: 'Start',
+                              color: Colors.white,
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                            ),
+                          )
+                        else if (isRunning)
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.pause, size: 18),
+                              onPressed: _stopTimer,
+                              tooltip: 'Pause',
+                              color: Colors.orange[700],
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                            ),
+                          )
+                        else
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF00704A),
+                                      Color(0xFF1C7549),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.play_arrow, size: 18),
+                                  onPressed: _startTimer,
+                                  tooltip: 'Resume',
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(8),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 36,
+                                    minHeight: 36,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  onPressed: _resetTimer,
+                                  tooltip: 'Reset',
+                                  color: Colors.grey[700],
+                                  padding: const EdgeInsets.all(8),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 36,
+                                    minHeight: 36,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    // Time display
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isCompleted
+                                ? const Color(0xFF1C7549).withOpacity(0.1)
+                                : isRunning && _remainingSeconds <= 60
+                                ? Colors.red[50]
+                                : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        _formatTime(_remainingSeconds),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              _totalDuration == 0 && !isCompleted
+                                  ? Colors.black87
+                                  : _remainingSeconds <= 60 && isRunning
+                                  ? Colors.red[700]
+                                  : isCompleted
+                                  ? const Color(0xFF1C7549)
+                                  : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1715,17 +2471,49 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
             .length;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        title: Text(
-          widget.habit.name,
-          style: GoogleFonts.dancingScript(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+      extendBodyBehindAppBar: false,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF00704A),
+                const Color(0xFF1C7549),
+                const Color(0xFF35855D),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            title: Text(
+              widget.habit.name,
+              style: GoogleFonts.dancingScript(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 1.2,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.2),
+                    offset: const Offset(0, 2),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+            elevation: 0,
           ),
         ),
-        elevation: 2,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -1742,15 +2530,19 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.white, Colors.white.withOpacity(0.95)],
+                ),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1945,15 +2737,19 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.white, Colors.white.withOpacity(0.95)],
+                ),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -2098,34 +2894,65 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
     IconData icon,
     double progress,
   ) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Colors.white.withOpacity(0.95)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00704A), Color(0xFF1C7549)],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 28, color: Colors.white),
+            ),
+            const SizedBox(height: 12),
             Text(
               value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              style: GoogleFonts.inter(
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                color: const Color(0xFF00704A),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.primary,
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey[200],
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFF00704A),
+                ),
+                minHeight: 6,
               ),
             ),
           ],

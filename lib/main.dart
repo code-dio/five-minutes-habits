@@ -513,6 +513,13 @@ class _HomeScreenState extends State<HomeScreen> {
               habitsByDate: _habitsByDate,
               habitCompletionStatus: _habitCompletionStatus,
               dateKey: _dateKey,
+              onDateSelected: (DateTime selectedDate) {
+                // Navigate back and update the selected date
+                Navigator.pop(context);
+                setState(() {
+                  _selectedDate = selectedDate;
+                });
+              },
             ),
       ),
     );
@@ -2201,6 +2208,7 @@ class HabitStatsScreen extends StatefulWidget {
   final Map<String, List<Habit>> habitsByDate;
   final Map<String, bool> habitCompletionStatus;
   final String Function(DateTime) dateKey;
+  final Function(DateTime)? onDateSelected;
 
   const HabitStatsScreen({
     super.key,
@@ -2208,6 +2216,7 @@ class HabitStatsScreen extends StatefulWidget {
     required this.habitsByDate,
     required this.habitCompletionStatus,
     required this.dateKey,
+    this.onDateSelected,
   });
 
   @override
@@ -2584,72 +2593,83 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 2,
                               ),
-                              child: Container(
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color:
-                                      isCompleted
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.primary
-                                          : Colors.grey[200],
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    if (widget.onDateSelected != null) {
+                                      widget.onDateSelected!(date);
+                                    }
+                                  },
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color:
-                                        isToday
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.primary
-                                            : Colors.transparent,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Center(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            _getWeekdayAbbreviation(
-                                              date.weekday,
-                                            ),
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  isCompleted
-                                                      ? Colors.white
-                                                      : Colors.grey[600],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${date.day}',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  isCompleted
-                                                      ? Colors.white
-                                                      : Colors.grey[700],
-                                            ),
-                                          ),
-                                        ],
+                                  child: Container(
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isCompleted
+                                              ? Theme.of(
+                                                context,
+                                              ).colorScheme.primary
+                                              : Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color:
+                                            isToday
+                                                ? Theme.of(
+                                                  context,
+                                                ).colorScheme.primary
+                                                : Colors.transparent,
+                                        width: 2,
                                       ),
                                     ),
-                                    if (isCompleted)
-                                      Positioned(
-                                        top: 4,
-                                        right: 4,
-                                        child: Icon(
-                                          Icons.check_circle,
-                                          size: 14,
-                                          color: Colors.white,
+                                    child: Stack(
+                                      children: [
+                                        Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                _getWeekdayAbbreviation(
+                                                  date.weekday,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      isCompleted
+                                                          ? Colors.white
+                                                          : Colors.grey[600],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '${date.day}',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      isCompleted
+                                                          ? Colors.white
+                                                          : Colors.grey[700],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                  ],
+                                        if (isCompleted)
+                                          Positioned(
+                                            top: 4,
+                                            right: 4,
+                                            child: Icon(
+                                              Icons.check_circle,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -2803,51 +2823,63 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
                         return const SizedBox.shrink();
                       }
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          color:
-                              isCompleted
-                                  ? Theme.of(context).colorScheme.primary
-                                  : isFuture
-                                  ? Colors.grey[100]
-                                  : Colors.grey[200],
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            // Only allow tapping on past or today dates
+                            if (!isFuture && widget.onDateSelected != null) {
+                              widget.onDateSelected!(date);
+                            }
+                          },
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color:
-                                isToday
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                        child: Stack(
-                          children: [
-                            Center(
-                              child: Text(
-                                '${date.day}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      isCompleted
-                                          ? Colors.white
-                                          : isFuture
-                                          ? Colors.grey[400]
-                                          : Colors.grey[700],
-                                ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color:
+                                  isCompleted
+                                      ? Theme.of(context).colorScheme.primary
+                                      : isFuture
+                                      ? Colors.grey[100]
+                                      : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color:
+                                    isToday
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.transparent,
+                                width: 2,
                               ),
                             ),
-                            if (isCompleted)
-                              Positioned(
-                                top: 2,
-                                right: 2,
-                                child: Icon(
-                                  Icons.check_circle,
-                                  size: 12,
-                                  color: Colors.white,
+                            child: Stack(
+                              children: [
+                                Center(
+                                  child: Text(
+                                    '${date.day}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isCompleted
+                                              ? Colors.white
+                                              : isFuture
+                                              ? Colors.grey[400]
+                                              : Colors.grey[700],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                          ],
+                                if (isCompleted)
+                                  Positioned(
+                                    top: 2,
+                                    right: 2,
+                                    child: Icon(
+                                      Icons.check_circle,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },

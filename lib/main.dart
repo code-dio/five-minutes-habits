@@ -1096,20 +1096,27 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: AppBar(
             backgroundColor: Colors.transparent,
-            title: Text(
-              'Five Minute Habits',
-              style: GoogleFonts.dancingScript(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.2,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withOpacity(0.2),
-                    offset: const Offset(0, 2),
-                    blurRadius: 4,
-                  ),
-                ],
+            title: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedDate = DateTime.now();
+                });
+              },
+              child: Text(
+                'Five Minute Habits',
+                style: GoogleFonts.dancingScript(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.2),
+                      offset: const Offset(0, 2),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
               ),
             ),
             elevation: 0,
@@ -2504,20 +2511,30 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
           ),
           child: AppBar(
             backgroundColor: Colors.transparent,
-            title: Text(
-              widget.habit.name,
-              style: GoogleFonts.dancingScript(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.2,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withOpacity(0.2),
-                    offset: const Offset(0, 2),
-                    blurRadius: 4,
-                  ),
-                ],
+            title: GestureDetector(
+              onTap: () {
+                // Navigate back to today's habit list view
+                if (widget.onDateSelected != null) {
+                  widget.onDateSelected!(DateTime.now());
+                } else {
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(
+                widget.habit.name,
+                style: GoogleFonts.dancingScript(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.2),
+                      offset: const Offset(0, 2),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
               ),
             ),
             elevation: 0,

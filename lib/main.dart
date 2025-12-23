@@ -2168,8 +2168,9 @@ class _HabitCardState extends State<HabitCard> {
                       ],
                     ),
                     const SizedBox(width: 12),
-                    // Time display
+                    // Time display with fixed width
                     Container(
+                      width: 85, // Fixed width to accommodate "Immed." on one line
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,
@@ -2185,6 +2186,8 @@ class _HabitCardState extends State<HabitCard> {
                       ),
                       child: Text(
                         _formatTime(_remainingSeconds),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.visible,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

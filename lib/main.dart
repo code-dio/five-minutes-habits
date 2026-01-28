@@ -345,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: InputDecoration(
                                 hintText: 'Enter habit name',
                                 labelText: 'Habit Name',
-                                prefixIcon: const Icon(Icons.fitness_center),
+                                prefixIcon: const Icon(Icons.task),
                               ),
                               autofocus: true,
                               onSubmitted: (_) {
@@ -934,7 +934,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: const InputDecoration(
                                 hintText: 'Enter habit name',
                                 labelText: 'Habit Name',
-                                prefixIcon: Icon(Icons.fitness_center),
+                                prefixIcon: Icon(Icons.task),
                               ),
                               autofocus: true,
                               onSubmitted: (_) {
@@ -2170,7 +2170,8 @@ class _HabitCardState extends State<HabitCard> {
                     const SizedBox(width: 12),
                     // Time display with fixed width
                     Container(
-                      width: 85, // Fixed width to accommodate "Immed." on one line
+                      width:
+                          85, // Fixed width to accommodate "Immed." on one line
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,

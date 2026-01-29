@@ -86,6 +86,60 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
+// Custom Logo Widget
+class AppLogo extends StatelessWidget {
+  final double size;
+  final Color? color;
+
+  const AppLogo({super.key, this.size = 120, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: LogoPainter(color: color ?? Colors.white),
+    );
+  }
+}
+
+class LogoPainter extends CustomPainter {
+  final Color color;
+
+  LogoPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // 로마 숫자 V 그리기
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'V',
+        style: TextStyle(
+          color: color,
+          fontSize: size.width * 0.7,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Inter',
+          letterSpacing: 0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        center.dx - textPainter.width / 2,
+        center.dy - textPainter.height / 2,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
 
@@ -153,18 +207,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo/Icon
+                  // Logo
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.15),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.task,
-                      size: 64,
-                      color: Colors.white,
-                    ),
+                    child: const AppLogo(size: 100, color: Colors.white),
                   ),
                   const SizedBox(height: 32),
                   // Title
@@ -1289,6 +1346,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: AppBar(
             backgroundColor: Colors.transparent,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: const AppLogo(size: 32, color: Colors.white),
+            ),
+            centerTitle: true,
             title: GestureDetector(
               onTap: () {
                 setState(() {

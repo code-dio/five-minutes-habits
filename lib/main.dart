@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'models/habit.dart';
 import 'services/habit_storage.dart';
 
@@ -151,7 +150,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   Future<void> _handleGoogleSignIn() async {
     setState(() {
@@ -159,22 +157,17 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final GoogleSignInAccount? account = await _googleSignIn.signIn();
-
-      // 구글 로그인 성공 또는 실패 여부와 관계없이 진입 허용
-      // (개발 단계에서는 설정 없이도 테스트 가능하도록)
-      if (account != null) {
-        // 로그인 성공
-        widget.onLogin();
-      } else {
-        // 사용자가 로그인을 취소했거나 에러 발생 시에도 진입 허용
-        await Future.delayed(const Duration(milliseconds: 500));
+      // 개발 단계에서는 인증 설정 여부와 관계없이 홈 화면 진입을 우선한다.
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
         widget.onLogin();
       }
     } catch (error) {
-      // 에러 발생 시에도 진입 허용 (개발 단계용)
-      await Future.delayed(const Duration(milliseconds: 500));
-      widget.onLogin();
+      // 예외가 발생해도 로그인 흐름을 막지 않는다.
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        widget.onLogin();
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -350,6 +343,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return _habitsByDate[key] ?? [];
   }
 
+  TimerController _ensureTimerController(String habitId) {
+    return _timerControllers.putIfAbsent(habitId, () => TimerController());
+  }
+
+  int _ensureTotalDuration(Habit habit) {
+    return _habitDurations.putIfAbsent(habit.id, () => habit.durationMinutes * 60);
+  }
+
+  int _ensureRemainingSeconds(Habit habit) {
+    return _remainingSeconds.putIfAbsent(
+      habit.id,
+      () => _ensureTotalDuration(habit),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -371,6 +379,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadHabits() async {
     try {
       final data = await HabitStorage.loadHabitsData();
+
+      if (!mounted) return;
 
       setState(() {
         _habitsByDate.clear();
@@ -1616,43 +1626,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.all(8),
                     onReorder: _reorderHabits,
                     children: [
-                      for (
-                        int index = 0;
-                        index < _currentHabits.length;
-                        index++
-                      )
+                      for (final habit in _currentHabits)
                         HabitCard(
-                          key: ValueKey(_currentHabits[index].id),
-                          habit: _currentHabits[index],
-                          timerController:
-                              _timerControllers[_currentHabits[index].id]!,
-                          remainingSeconds:
-                              _remainingSeconds[_currentHabits[index].id]!,
-                          totalDuration:
-                              _habitDurations[_currentHabits[index].id]!,
-                          isCompleted:
-                              _habitCompletionStatus[_currentHabits[index]
-                                  .id] ??
-                              false,
+                          key: ValueKey(habit.id),
+                          habit: habit,
+                          timerController: _ensureTimerController(habit.id),
+                          remainingSeconds: _ensureRemainingSeconds(habit),
+                          totalDuration: _ensureTotalDuration(habit),
+                          isCompleted: _habitCompletionStatus[habit.id] ?? false,
                           onTimeUpdate: (seconds) {
                             setState(() {
-                              _remainingSeconds[_currentHabits[index].id] =
-                                  seconds;
+                              _remainingSeconds[habit.id] = seconds;
                             });
                           },
                           onCompletionChanged: (isCompleted) {
                             setState(() {
-                              _habitCompletionStatus[_currentHabits[index].id] =
-                                  isCompleted;
+                              _habitCompletionStatus[habit.id] = isCompleted;
                             });
                             _saveHabits();
                           },
-                          onTap: () => _showHabitStats(_currentHabits[index]),
+                          onTap: () => _showHabitStats(habit),
                           onLongPress:
                               () => _showHabitOptionsDialog(
-                                _currentHabits[index].id,
-                                _currentHabits[index].name,
-                                _currentHabits[index].durationMinutes,
+                                habit.id,
+                                habit.name,
+                                habit.durationMinutes,
                               ),
                         ),
                     ],

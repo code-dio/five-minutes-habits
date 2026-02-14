@@ -20,14 +20,19 @@ class HabitStorage {
     // Convert habitsByDate to JSON
     final habitsByDateJson = <String, dynamic>{};
     for (var entry in habitsByDate.entries) {
-      habitsByDateJson[entry.key] = entry.value.map((habit) => {
-        'id': habit.id,
-        'uniqueHabitId': habit.uniqueHabitId,
-        'name': habit.name,
-        'createdAt': habit.createdAt.toIso8601String(),
-        'durationMinutes': habit.durationMinutes,
-        'date': habit.date.toIso8601String(),
-      }).toList();
+      habitsByDateJson[entry.key] =
+          entry.value
+              .map(
+                (habit) => {
+                  'id': habit.id,
+                  'uniqueHabitId': habit.uniqueHabitId,
+                  'name': habit.name,
+                  'createdAt': habit.createdAt.toIso8601String(),
+                  'durationMinutes': habit.durationMinutes,
+                  'date': habit.date.toIso8601String(),
+                },
+              )
+              .toList();
     }
     await prefs.setString(_habitsByDateKey, jsonEncode(habitsByDateJson));
 
@@ -42,7 +47,10 @@ class HabitStorage {
     for (var entry in habitCompletionStatus.entries) {
       completionStatusJson[entry.key] = entry.value;
     }
-    await prefs.setString(_habitCompletionStatusKey, jsonEncode(completionStatusJson));
+    await prefs.setString(
+      _habitCompletionStatusKey,
+      jsonEncode(completionStatusJson),
+    );
   }
 
   // Load habits data from local storage
@@ -59,21 +67,24 @@ class HabitStorage {
     // Load habitsByDate
     final habitsByDateJsonString = prefs.getString(_habitsByDateKey);
     if (habitsByDateJsonString != null) {
-      final habitsByDateJson = jsonDecode(habitsByDateJsonString) as Map<String, dynamic>;
+      final habitsByDateJson =
+          jsonDecode(habitsByDateJsonString) as Map<String, dynamic>;
       final habitsByDate = <String, List<Habit>>{};
-      
+
       for (var entry in habitsByDateJson.entries) {
-        final habitsList = (entry.value as List).map((habitJson) {
-          final habitMap = habitJson as Map<String, dynamic>;
-          return Habit(
-            id: habitMap['id'] as String,
-            uniqueHabitId: habitMap['uniqueHabitId'] as String,
-            name: habitMap['name'] as String,
-            createdAt: DateTime.parse(habitMap['createdAt'] as String),
-            durationMinutes: habitMap['durationMinutes'] as int,
-            date: DateTime.parse(habitMap['date'] as String),
-          );
-        }).toList();
+        final habitsList =
+            (entry.value as List).map((habitJson) {
+              final habitMap = habitJson as Map<String, dynamic>;
+              final id = habitMap['id'] as String;
+              return Habit(
+                id: id,
+                uniqueHabitId: (habitMap['uniqueHabitId'] as String?) ?? id,
+                name: habitMap['name'] as String,
+                createdAt: DateTime.parse(habitMap['createdAt'] as String),
+                durationMinutes: habitMap['durationMinutes'] as int,
+                date: DateTime.parse(habitMap['date'] as String),
+              );
+            }).toList();
         habitsByDate[entry.key] = habitsList;
       }
       result['habitsByDate'] = habitsByDate;
@@ -82,7 +93,8 @@ class HabitStorage {
     // Load remaining seconds
     final remainingSecondsJsonString = prefs.getString(_remainingSecondsKey);
     if (remainingSecondsJsonString != null) {
-      final remainingSecondsJson = jsonDecode(remainingSecondsJsonString) as Map<String, dynamic>;
+      final remainingSecondsJson =
+          jsonDecode(remainingSecondsJsonString) as Map<String, dynamic>;
       final remainingSeconds = <String, int>{};
       for (var entry in remainingSecondsJson.entries) {
         remainingSeconds[entry.key] = entry.value as int;
@@ -93,7 +105,8 @@ class HabitStorage {
     // Load habit durations
     final habitDurationsJsonString = prefs.getString(_habitDurationsKey);
     if (habitDurationsJsonString != null) {
-      final habitDurationsJson = jsonDecode(habitDurationsJsonString) as Map<String, dynamic>;
+      final habitDurationsJson =
+          jsonDecode(habitDurationsJsonString) as Map<String, dynamic>;
       final habitDurations = <String, int>{};
       for (var entry in habitDurationsJson.entries) {
         habitDurations[entry.key] = entry.value as int;
@@ -102,9 +115,12 @@ class HabitStorage {
     }
 
     // Load completion status
-    final habitCompletionStatusJsonString = prefs.getString(_habitCompletionStatusKey);
+    final habitCompletionStatusJsonString = prefs.getString(
+      _habitCompletionStatusKey,
+    );
     if (habitCompletionStatusJsonString != null) {
-      final habitCompletionStatusJson = jsonDecode(habitCompletionStatusJsonString) as Map<String, dynamic>;
+      final habitCompletionStatusJson =
+          jsonDecode(habitCompletionStatusJsonString) as Map<String, dynamic>;
       final habitCompletionStatus = <String, bool>{};
       for (var entry in habitCompletionStatusJson.entries) {
         habitCompletionStatus[entry.key] = entry.value as bool;
@@ -124,5 +140,3 @@ class HabitStorage {
     await prefs.remove(_habitCompletionStatusKey);
   }
 }
-
-

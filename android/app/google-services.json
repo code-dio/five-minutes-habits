@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "169125606725",
+    "project_id": "five-minute-habits",
+    "storage_bucket": "five-minute-habits.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:169125606725:android:19897fbdc73bb0fd123a2c",
+        "android_client_info": {
+          "package_name": "com.example.five_minute_habits"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "169125606725-pqek2dm29m0lgvtji9o4tr1c8ekgiu0j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOI1ieNZOBJx__ekn-8A9cRy6l8tN5alw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "169125606725-pqek2dm29m0lgvtji9o4tr1c8ekgiu0j.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "169125606725-k2tnodcr9pj8p8l3v9m2bnfrkbcba21k.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.fiveMinuteHabits"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

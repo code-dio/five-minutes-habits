@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'firebase_options.dart';
 import 'models/habit.dart';
 import 'services/habit_storage.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -157,16 +163,30 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 개발 단계에서는 인증 설정 여부와 관계없이 홈 화면 진입을 우선한다.
-      await Future.delayed(const Duration(milliseconds: 300));
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        // 사용자가 로그인 취소
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
       if (mounted) {
         widget.onLogin();
       }
     } catch (error) {
-      // 예외가 발생해도 로그인 흐름을 막지 않는다.
-      await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
-        widget.onLogin();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('로그인 실패: $error')),
+        );
       }
     } finally {
       if (mounted) {

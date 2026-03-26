@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
 import 'models/habit.dart';
-import 'services/habit_storage.dart';
+import 'services/firestore_habit_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,10 +22,12 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isLoggedIn = false;
+  String? _uid;
 
   void _handleLogin() {
     setState(() {
       _isLoggedIn = true;
+      _uid = FirebaseAuth.instance.currentUser?.uid;
     });
   }
 
@@ -86,7 +88,9 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       home:
-          _isLoggedIn ? const HomeScreen() : LoginScreen(onLogin: _handleLogin),
+          _isLoggedIn && _uid != null
+              ? HomeScreen(uid: _uid!)
+              : LoginScreen(onLogin: _handleLogin),
     );
   }
 }
@@ -335,13 +339,17 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String uid;
+
+  const HomeScreen({super.key, required this.uid});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late final FirestoreHabitStorage _storage;
+
   // Store habits per date: Map<date (normalized to day), List<Habit>>
   final Map<String, List<Habit>> _habitsByDate = {};
   final Map<String, TimerController> _timerControllers = {};
@@ -381,6 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _storage = FirestoreHabitStorage(widget.uid);
     _loadHabits();
   }
 
@@ -395,10 +404,10 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // Load habits from local storage
+  // Load habits from Firestore
   Future<void> _loadHabits() async {
     try {
-      final data = await HabitStorage.loadHabitsData();
+      final data = await _storage.loadHabitsData();
 
       if (!mounted) return;
 
@@ -441,10 +450,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Save habits to local storage
+  // Save habits to Firestore
   Future<void> _saveHabits() async {
     try {
-      await HabitStorage.saveHabitsData(
+      await _storage.saveHabitsData(
         habitsByDate: _habitsByDate,
         remainingSeconds: _remainingSeconds,
         habitDurations: _habitDurations,
@@ -890,38 +899,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _deleteHabit(String id) {
+    // Find uniqueHabitId before modifying state
+    String? uniqueHabitId;
+    for (var habits in _habitsByDate.values) {
+      try {
+        uniqueHabitId = habits.firstWhere((h) => h.id == id).uniqueHabitId;
+        break;
+      } catch (_) {}
+    }
+    if (uniqueHabitId == null) return;
+
+    final String resolvedUniqueHabitId = uniqueHabitId;
+
     setState(() {
-      // Find the original habit to get its unique habit ID
-      Habit? originalHabit;
-      for (var entry in _habitsByDate.entries) {
-        try {
-          originalHabit = entry.value.firstWhere((habit) => habit.id == id);
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (originalHabit == null) return;
-
-      final uniqueHabitId = originalHabit.uniqueHabitId;
-
-      // Collect all habit IDs to clean up
       final idsToRemove = <String>[];
-
-      // Remove all habits with the same unique habit ID from all dates
       for (var entry in _habitsByDate.entries) {
-        final habits = entry.value;
-        habits.removeWhere((habit) {
-          if (habit.uniqueHabitId == uniqueHabitId) {
+        entry.value.removeWhere((habit) {
+          if (habit.uniqueHabitId == resolvedUniqueHabitId) {
             idsToRemove.add(habit.id);
             return true;
           }
           return false;
         });
       }
-
-      // Clean up all related data for all matching habit IDs
       for (var habitId in idsToRemove) {
         _timerControllers[habitId]?.dispose();
         _timerControllers.remove(habitId);
@@ -930,7 +930,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _habitCompletionStatus.remove(habitId);
       }
     });
-    _saveHabits();
+
+    _storage.deleteHabitsByUniqueId(resolvedUniqueHabitId);
   }
 
   void _confirmDeleteHabit(String id, String habitName) {
@@ -1076,54 +1077,49 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _modifyHabit(String id, String newName, int newDurationMinutes) {
+    final newDurationSeconds = newDurationMinutes * 60;
+
+    // Find uniqueHabitId before modifying state
+    String? uniqueHabitId;
+    for (var habits in _habitsByDate.values) {
+      try {
+        uniqueHabitId = habits.firstWhere((h) => h.id == id).uniqueHabitId;
+        break;
+      } catch (_) {}
+    }
+    if (uniqueHabitId == null) return;
+
+    final String resolvedUniqueHabitId = uniqueHabitId;
+
     setState(() {
-      final newDurationSeconds = newDurationMinutes * 60;
-
-      // Find the original habit
-      Habit? originalHabit;
-      for (var entry in _habitsByDate.entries) {
-        try {
-          originalHabit = entry.value.firstWhere((habit) => habit.id == id);
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (originalHabit == null) return;
-
-      final uniqueHabitId = originalHabit.uniqueHabitId;
-
-      // Update all habits with the same unique habit ID across all dates
       for (var entry in _habitsByDate.entries) {
         final habits = entry.value;
         for (int i = 0; i < habits.length; i++) {
           final habit = habits[i];
-          // Update habits that match the unique habit ID
-          if (habit.uniqueHabitId == uniqueHabitId) {
-            // Update the habit's name and duration
-            final updatedHabit = Habit(
-              id: habit.id, // Keep the same ID
-              uniqueHabitId:
-                  habit.uniqueHabitId, // Keep the same unique habit ID
+          if (habit.uniqueHabitId == resolvedUniqueHabitId) {
+            habits[i] = Habit(
+              id: habit.id,
+              uniqueHabitId: habit.uniqueHabitId,
               name: newName,
               createdAt: habit.createdAt,
               durationMinutes: newDurationMinutes,
               date: habit.date,
             );
-
-            // Update duration and remaining seconds if not completed
             if (!(_habitCompletionStatus[habit.id] ?? false)) {
               _habitDurations[habit.id] = newDurationSeconds;
               _remainingSeconds[habit.id] = newDurationSeconds;
             }
-
-            habits[i] = updatedHabit;
           }
         }
       }
     });
-    _saveHabits();
+
+    _storage.updateHabitNameAndDuration(
+      resolvedUniqueHabitId,
+      name: newName,
+      durationMinutes: newDurationMinutes,
+      durationSeconds: newDurationSeconds,
+    );
   }
 
   void _showModifyHabitDialog(
@@ -1663,7 +1659,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             setState(() {
                               _habitCompletionStatus[habit.id] = isCompleted;
                             });
-                            _saveHabits();
+                            _storage.updateHabitProgress(
+                              habit.id,
+                              remainingSeconds: _remainingSeconds[habit.id] ?? 0,
+                              isCompleted: isCompleted,
+                            );
                           },
                           onTap: () => _showHabitStats(habit),
                           onLongPress:

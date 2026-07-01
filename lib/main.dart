@@ -3,13 +3,26 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'models/habit.dart';
+import 'services/base_habit_storage.dart';
 import 'services/firestore_habit_storage.dart';
+import 'services/local_habit_storage.dart';
+import 'services/habit_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Firestore Offline Persistence (오프라인 캐싱) 공식 활성화
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
   runApp(const MyApp());
 }
 
@@ -21,14 +34,106 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  bool _isLoading = true;
   bool _isLoggedIn = false;
+  bool _isGuest = false;
   String? _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isGuest = prefs.getBool('is_guest') ?? false;
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser != null) {
+        setState(() {
+          _isLoggedIn = true;
+          _isGuest = false;
+          _uid = currentUser.uid;
+          _isLoading = false;
+        });
+      } else if (isGuest) {
+        setState(() {
+          _isLoggedIn = true;
+          _isGuest = true;
+          _uid = 'guest';
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoggedIn = false;
+          _isGuest = false;
+          _uid = null;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking login status: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _handleLogin() {
     setState(() {
       _isLoggedIn = true;
+      _isGuest = false;
       _uid = FirebaseAuth.instance.currentUser?.uid;
     });
+  }
+
+  void _handleGuestLogin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_guest', true);
+      setState(() {
+        _isLoggedIn = true;
+        _isGuest = true;
+        _uid = 'guest';
+      });
+    } catch (e) {
+      debugPrint('Error setting guest login: $e');
+    }
+  }
+
+  void _handleLogout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('is_guest');
+      await FirebaseAuth.instance.signOut();
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.signOut();
+      }
+      setState(() {
+        _isLoggedIn = false;
+        _isGuest = false;
+        _uid = null;
+      });
+    } catch (e) {
+      debugPrint('Error signing out: $e');
+    }
+  }
+
+  void _handleMigrateToGoogle() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('is_guest');
+      setState(() {
+        _isLoggedIn = true;
+        _isGuest = false;
+        _uid = FirebaseAuth.instance.currentUser?.uid;
+      });
+    } catch (e) {
+      debugPrint('Error migrating guest: $e');
+    }
   }
 
   @override
@@ -87,10 +192,57 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
       ),
-      home:
-          _isLoggedIn && _uid != null
-              ? HomeScreen(uid: _uid!)
-              : LoginScreen(onLogin: _handleLogin),
+      home: _isLoading
+          ? Scaffold(
+              body: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF00704A),
+                      const Color(0xFF1C7549),
+                      const Color(0xFF35855D),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const AppLogo(size: 100, color: Colors.white),
+                      ),
+                      const SizedBox(height: 32),
+                      const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : _isLoggedIn && _uid != null
+              ? HomeScreen(
+                  uid: _uid!,
+                  isGuest: _isGuest,
+                  onLogout: _handleLogout,
+                  onMigrate: _handleMigrateToGoogle,
+                )
+              : LoginScreen(
+                  onLogin: _handleLogin,
+                  onGuestLogin: _handleGuestLogin,
+                ),
     );
   }
 }
@@ -151,8 +303,13 @@ class LogoPainter extends CustomPainter {
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
+  final VoidCallback onGuestLogin;
 
-  const LoginScreen({super.key, required this.onLogin});
+  const LoginScreen({
+    super.key,
+    required this.onLogin,
+    required this.onGuestLogin,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -328,6 +485,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // Guest Login button (Glassmorphism design)
+                  Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.25),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : widget.onGuestLogin,
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        '게스트로 시작하기',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -340,15 +527,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
 class HomeScreen extends StatefulWidget {
   final String uid;
+  final bool isGuest;
+  final VoidCallback onLogout;
+  final VoidCallback onMigrate;
 
-  const HomeScreen({super.key, required this.uid});
+  const HomeScreen({
+    super.key,
+    required this.uid,
+    required this.isGuest,
+    required this.onLogout,
+    required this.onMigrate,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final FirestoreHabitStorage _storage;
+  late final BaseHabitStorage _storage;
+  late final PageController _calendarPageController;
+  final int _initialCalendarPage = 500;
 
   // Store habits per date: Map<date (normalized to day), List<Habit>>
   final Map<String, List<Habit>> _habitsByDate = {};
@@ -359,10 +557,35 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<String, bool> _habitCompletionStatus =
       {}; // Track completion status for each habit
   DateTime _selectedDate = DateTime.now();
+  bool _isOffline = false;
+
+  DateTime get _todayMonday {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+  }
+
+  DateTime _getMondayOfWeek(int page) {
+    return _todayMonday.add(Duration(days: (page - _initialCalendarPage) * 7));
+  }
+
+  int _getPageFromDate(DateTime date) {
+    final dateMonday = DateTime(date.year, date.month, date.day).subtract(Duration(days: date.weekday - 1));
+    final differenceInDays = dateMonday.difference(_todayMonday).inDays;
+    final differenceInWeeks = (differenceInDays / 7).round();
+    return _initialCalendarPage + differenceInWeeks;
+  }
 
   // Helper to normalize date to day (remove time component)
   String _dateKey(DateTime date) {
     return '${date.year}-${date.month}-${date.day}';
+  }
+
+  String _getMonthYearLabel(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
   }
 
   // Get habits for selected date
@@ -389,7 +612,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _storage = FirestoreHabitStorage(widget.uid);
+    _storage = widget.isGuest
+        ? LocalHabitStorage()
+        : FirestoreHabitStorage(widget.uid);
+    _calendarPageController = PageController(
+      initialPage: _getPageFromDate(_selectedDate),
+    );
     _loadHabits();
   }
 
@@ -397,6 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     // Save habits before disposing
     _saveHabits();
+    _calendarPageController.dispose();
     // Dispose all timers
     for (var controller in _timerControllers.values) {
       controller.dispose();
@@ -411,7 +640,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!mounted) return;
 
+      final isOffline = data['isOffline'] as bool? ?? false;
+
       setState(() {
+        _isOffline = isOffline;
         _habitsByDate.clear();
         _remainingSeconds.clear();
         _habitDurations.clear();
@@ -447,6 +679,11 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       // If loading fails, start with empty data
       debugPrint('Error loading habits: $e');
+      if (mounted) {
+        setState(() {
+          _isOffline = true;
+        });
+      }
     }
   }
 
@@ -461,6 +698,136 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } catch (e) {
       debugPrint('Error saving habits: $e');
+    }
+  }
+
+  Future<void> _handleMigrateFlow() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        return;
+      }
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            content: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 24),
+                  Text(
+                    '데이터를 클라우드로 안전하게 옮기고 있습니다...',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      final newUid = FirebaseAuth.instance.currentUser?.uid;
+
+      if (newUid != null) {
+        final localData = await HabitStorage.loadHabitsData();
+        final habitsByDate = localData['habitsByDate'] as Map<String, List<Habit>>;
+        final remainingSeconds = localData['remainingSeconds'] as Map<String, int>;
+        final habitDurations = localData['habitDurations'] as Map<String, int>;
+        final habitCompletionStatus = localData['habitCompletionStatus'] as Map<String, bool>;
+
+        if (habitsByDate.isNotEmpty) {
+          final firestoreStorage = FirestoreHabitStorage(newUid);
+          await firestoreStorage.saveHabitsData(
+            habitsByDate: habitsByDate,
+            remainingSeconds: remainingSeconds,
+            habitDurations: habitDurations,
+            habitCompletionStatus: habitCompletionStatus,
+          );
+        }
+
+        await HabitStorage.clearAll();
+
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '구글 계정 연동 및 데이터 백업이 완료되었습니다.',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+          widget.onMigrate();
+        }
+      } else {
+        throw Exception('사용자 UID를 가져오지 못했습니다.');
+      }
+    } catch (e) {
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('연동 실패: $e')),
+        );
+      }
+    }
+  }
+
+  void _handleLogoutFlow() {
+    if (widget.isGuest) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            '체험 모드 종료',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            '체험 모드를 종료하면 지금까지 작성된 모든 습관 데이터가 삭제됩니다. 계속하시겠습니까?',
+            style: GoogleFonts.inter(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('취소', style: TextStyle(color: Colors.grey[700])),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await HabitStorage.clearAll();
+                widget.onLogout();
+              },
+              child: const Text('종료 및 삭제', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      widget.onLogout();
     }
   }
 
@@ -508,6 +875,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /*
   String _formatDate(DateTime date) {
     const weekdays = [
       'Monday',
@@ -540,6 +908,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return '$weekday, $month $day, $year';
   }
+  */
 
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
@@ -788,6 +1157,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _selectedDate = selectedDate;
         });
+        _calendarPageController.jumpToPage(_getPageFromDate(selectedDate));
       }
     });
   }
@@ -802,12 +1172,15 @@ class _HomeScreenState extends State<HomeScreen> {
               habitsByDate: _habitsByDate,
               habitCompletionStatus: _habitCompletionStatus,
               dateKey: _dateKey,
+              isGuest: widget.isGuest,
+              onMigrate: _handleMigrateFlow,
               onDateSelected: (DateTime selectedDate) {
                 // Navigate back and update the selected date
                 Navigator.pop(context);
                 setState(() {
                   _selectedDate = selectedDate;
                 });
+                _calendarPageController.jumpToPage(_getPageFromDate(selectedDate));
               },
             ),
       ),
@@ -1379,9 +1752,11 @@ class _HomeScreenState extends State<HomeScreen> {
             centerTitle: true,
             title: GestureDetector(
               onTap: () {
+                final now = DateTime.now();
                 setState(() {
-                  _selectedDate = DateTime.now();
+                  _selectedDate = now;
                 });
+                _calendarPageController.jumpToPage(_getPageFromDate(now));
               },
               child: Text(
                 'Five Minute Habits',
@@ -1402,6 +1777,20 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             elevation: 0,
             actions: [
+              if (widget.isGuest)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    onPressed: _handleMigrateFlow,
+                    tooltip: '구글 계정 연동 및 백업',
+                    color: Colors.white,
+                  ),
+                ),
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
@@ -1412,6 +1801,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.calendar_month),
                   onPressed: _showCalendarDialog,
                   tooltip: 'Select Date',
+                  color: Colors.white,
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: Icon(widget.isGuest ? Icons.exit_to_app : Icons.logout),
+                  onPressed: _handleLogoutFlow,
+                  tooltip: widget.isGuest ? '체험 종료' : '로그아웃',
                   color: Colors.white,
                 ),
               ),
@@ -1461,136 +1863,328 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         // Date selector - always visible, horizontally scrollable (7 days visible)
         Container(
-          height: 90,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          height: 135,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.white, Colors.white.withOpacity(0.95)],
-            ),
+            color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 12,
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Show 7 days with selected date in the center (3 before, selected, 3 after)
-              final today = DateTime.now();
-
-              return Row(
-                children: List.generate(7, (index) {
-                  // Show 3 days before selected date to 3 days after (selected date in center at index 3)
-                  final date = _selectedDate.subtract(
-                    Duration(days: 3 - index),
-                  );
-                  final isSelected = _isSameDay(date, _selectedDate);
-                  final isToday = _isSameDay(date, today);
-
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedDate = date;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          gradient:
-                              isSelected
-                                  ? LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      const Color(0xFF00704A),
-                                      const Color(0xFF1C7549),
-                                    ],
-                                  )
-                                  : null,
-                          color:
-                              isSelected
-                                  ? null
-                                  : isToday && !isSelected
-                                  ? Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withOpacity(0.1)
-                                  : Colors.transparent,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color:
-                                isToday
-                                    ? Theme.of(context).colorScheme.primary
-                                    : isSelected
-                                    ? Colors.transparent
-                                    : Colors.grey[200]!,
-                            width:
-                                isToday
-                                    ? 2.5
-                                    : isSelected
-                                    ? 0
-                                    : 1,
-                          ),
-                          boxShadow:
-                              isSelected
-                                  ? [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF00704A,
-                                      ).withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                  : null,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _getWeekdayAbbreviation(date.weekday),
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color:
-                                    isSelected
-                                        ? Colors.white
-                                        : isToday
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.grey[600],
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${date.day}',
-                              style: GoogleFonts.inter(
-                                fontSize: 20,
-                                color:
-                                    isSelected
-                                        ? Colors.white
-                                        : isToday
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.black87,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+          child: Column(
+            children: [
+              // 1. Year/Month Indicator & Navigation Chevron Header Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _getMonthYearLabel(_selectedDate),
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF00704A),
                       ),
                     ),
-                  );
-                }),
-              );
-            },
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left, size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            _calendarPageController.previousPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          tooltip: '이전 주',
+                          color: const Color(0xFF00704A),
+                        ),
+                        const SizedBox(width: 16),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right, size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            _calendarPageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          tooltip: '다음 주',
+                          color: const Color(0xFF00704A),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, thickness: 0.5, color: Color(0xFFEEEEEE)),
+              // 2. Weekly PageView
+              Expanded(
+                child: PageView.builder(
+                  controller: _calendarPageController,
+                  onPageChanged: (page) {
+                    final newMonday = _getMondayOfWeek(page);
+                    final newSelectedDate = newMonday.add(Duration(days: _selectedDate.weekday - 1));
+                    setState(() {
+                      _selectedDate = newSelectedDate;
+                    });
+                  },
+                  itemBuilder: (context, pageIndex) {
+                    final monday = _getMondayOfWeek(pageIndex);
+                    final today = DateTime.now();
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Row(
+                        children: List.generate(7, (index) {
+                          final date = monday.add(Duration(days: index));
+                          final isSelected = _isSameDay(date, _selectedDate);
+                          final isToday = _isSameDay(date, today);
+
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedDate = date;
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeInOut,
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                decoration: BoxDecoration(
+                                  gradient: isSelected
+                                      ? const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFF00704A),
+                                            Color(0xFF1C7549),
+                                          ],
+                                        )
+                                      : null,
+                                  color: isSelected
+                                      ? null
+                                      : isToday && !isSelected
+                                          ? const Color(0xFF00704A).withOpacity(0.08)
+                                          : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isToday
+                                        ? const Color(0xFF00704A)
+                                        : isSelected
+                                            ? Colors.transparent
+                                            : Colors.grey[200]!,
+                                    width: isToday
+                                        ? 2.0
+                                        : isSelected
+                                            ? 0
+                                            : 1,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF00704A).withOpacity(0.2),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _getWeekdayAbbreviation(date.weekday),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : isToday
+                                                ? const Color(0xFF00704A)
+                                                : Colors.grey[600],
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${date.day}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : isToday
+                                                ? const Color(0xFF00704A)
+                                                : Colors.black87,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
+        if (!widget.isGuest && _isOffline)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFD97706).withOpacity(0.08),
+                  const Color(0xFFF59E0B).withOpacity(0.04),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFD97706).withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD97706).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.cloud_off,
+                    color: Color(0xFFD97706),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '오프라인 모드 작동 중',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: const Color(0xFFD97706),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '네트워크 통신이 불안정합니다. 변경사항은 로컬에 캐싱되며 온라인 연결 시 자동으로 백업됩니다.',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.grey[700],
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Color(0xFFD97706)),
+                  onPressed: _loadHabits,
+                  tooltip: '새로고침',
+                ),
+              ],
+            ),
+          ),
+        if (widget.isGuest)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF00704A).withOpacity(0.08),
+                  const Color(0xFF1C7549).withOpacity(0.04),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF00704A).withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00704A).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.cloud_queue,
+                    color: Color(0xFF00704A),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '클라우드 동기화 제안',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: const Color(0xFF00704A),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '게스트 데이터는 기기에만 저장됩니다. 로그인하여 클라우드에 안전하게 통계를 보관하세요.',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.grey[700],
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _handleMigrateFlow,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00704A),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    '연동하기',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         // Habit list or empty state
         Expanded(
           child:
@@ -1680,6 +2274,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /*
   Widget _buildStatsTab() {
     // Calculate statistics
     final totalDays = _habitsByDate.length;
@@ -1890,7 +2485,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+  */
 
+  /*
   Widget _buildStatCard(
     BuildContext context,
     String title,
@@ -1942,6 +2539,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
+  */
 }
 
 class TimerController {
@@ -1981,6 +2579,8 @@ class _HabitCardState extends State<HabitCard> {
   late bool _isCompleted;
   late int _remainingSeconds;
   late int _totalDuration;
+  DateTime? _startTime;
+  late int _startRemainingSeconds;
 
   @override
   void initState() {
@@ -2010,6 +2610,8 @@ class _HabitCardState extends State<HabitCard> {
     setState(() {
       _isRunning = true;
       _isCompleted = false;
+      _startTime = DateTime.now();
+      _startRemainingSeconds = _remainingSeconds;
     });
 
     // If duration is 0 (immediate), complete immediately
@@ -2017,6 +2619,7 @@ class _HabitCardState extends State<HabitCard> {
       setState(() {
         _remainingSeconds = 0;
         _isRunning = false;
+        _startTime = null;
         _isCompleted = true;
       });
       widget.onTimeUpdate(0);
@@ -2030,12 +2633,14 @@ class _HabitCardState extends State<HabitCard> {
   void _stopTimer() {
     setState(() {
       _isRunning = false;
+      _startTime = null;
     });
   }
 
   void _resetTimer() {
     setState(() {
       _isRunning = false;
+      _startTime = null;
       _remainingSeconds = _totalDuration;
       _isCompleted = false;
     });
@@ -2045,26 +2650,29 @@ class _HabitCardState extends State<HabitCard> {
   }
 
   void _tick() {
-    if (!_isRunning) return;
+    if (!_isRunning || _startTime == null) return;
 
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted || !_isRunning) return;
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!mounted || !_isRunning || _startTime == null) return;
+
+      final elapsed = DateTime.now().difference(_startTime!).inSeconds;
+      final newRemaining = _startRemainingSeconds - elapsed;
 
       setState(() {
-        if (_remainingSeconds > 0) {
-          _remainingSeconds--;
-          widget.onTimeUpdate(_remainingSeconds);
-
-          if (_remainingSeconds == 0) {
-            _isRunning = false;
-            _isCompleted = true;
-            widget.onCompletionChanged(true);
-            _showCompletionDialog();
-          } else {
-            _tick();
-          }
-        } else {
+        if (newRemaining <= 0) {
+          _remainingSeconds = 0;
           _isRunning = false;
+          _startTime = null;
+          _isCompleted = true;
+          widget.onTimeUpdate(0);
+          widget.onCompletionChanged(true);
+          _showCompletionDialog();
+        } else {
+          if (_remainingSeconds != newRemaining) {
+            _remainingSeconds = newRemaining;
+            widget.onTimeUpdate(newRemaining);
+          }
+          _tick();
         }
       });
     });
@@ -2476,6 +3084,17 @@ class _HabitCardState extends State<HabitCard> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTapDown: (_) {
+                        HapticFeedback.mediumImpact();
+                      },
+                      child: Icon(
+                        Icons.drag_indicator,
+                        color: Colors.grey[400],
+                        size: 22,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2493,6 +3112,8 @@ class HabitStatsScreen extends StatefulWidget {
   final Map<String, bool> habitCompletionStatus;
   final String Function(DateTime) dateKey;
   final Function(DateTime)? onDateSelected;
+  final bool isGuest;
+  final VoidCallback? onMigrate;
 
   const HabitStatsScreen({
     super.key,
@@ -2501,6 +3122,8 @@ class HabitStatsScreen extends StatefulWidget {
     required this.habitCompletionStatus,
     required this.dateKey,
     this.onDateSelected,
+    required this.isGuest,
+    this.onMigrate,
   });
 
   @override
@@ -3207,6 +3830,88 @@ class _HabitStatsScreenState extends State<HabitStatsScreen> {
                 ),
               ],
             ),
+            if (widget.isGuest) ...[
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF00704A).withOpacity(0.08),
+                      const Color(0xFF1C7549).withOpacity(0.04),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF00704A).withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.cloud_queue,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '통계 데이터를 보존하고 싶으신가요?',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '현재 비회원(게스트) 상태로 이용 중이므로 앱 삭제 시 통계가 영구 삭제됩니다. 안전하게 클라우드 백업을 활성화하세요.',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          if (widget.onMigrate != null) {
+                            widget.onMigrate!();
+                          }
+                        },
+                        icon: const Icon(Icons.cloud_upload_outlined),
+                        label: Text(
+                          '지금 클라우드에 백업하기',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00704A),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

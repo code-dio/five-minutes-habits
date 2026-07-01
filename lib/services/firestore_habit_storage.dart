@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/habit.dart';
+import 'base_habit_storage.dart';
 
-class FirestoreHabitStorage {
+class FirestoreHabitStorage implements BaseHabitStorage {
   final String uid;
 
   FirestoreHabitStorage(this.uid);
@@ -9,15 +10,36 @@ class FirestoreHabitStorage {
   CollectionReference<Map<String, dynamic>> get _habitsRef =>
       FirebaseFirestore.instance.collection('users').doc(uid).collection('habits');
 
+  @override
   Future<Map<String, dynamic>> loadHabitsData() async {
     final result = <String, dynamic>{
       'habitsByDate': <String, List<Habit>>{},
       'remainingSeconds': <String, int>{},
       'habitDurations': <String, int>{},
       'habitCompletionStatus': <String, bool>{},
+      'isOffline': false,
     };
 
-    final snapshot = await _habitsRef.get();
+    QuerySnapshot<Map<String, dynamic>> snapshot;
+    bool isOffline = false;
+
+    try {
+      snapshot = await _habitsRef.get().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          isOffline = true;
+          return _habitsRef.get(const GetOptions(source: Source.cache));
+        },
+      );
+    } catch (e) {
+      isOffline = true;
+      try {
+        snapshot = await _habitsRef.get(const GetOptions(source: Source.cache));
+      } catch (cacheError) {
+        return result;
+      }
+    }
+
     final habitsByDate = <String, List<Habit>>{};
     final remainingSeconds = <String, int>{};
     final habitDurations = <String, int>{};
@@ -48,10 +70,12 @@ class FirestoreHabitStorage {
     result['remainingSeconds'] = remainingSeconds;
     result['habitDurations'] = habitDurations;
     result['habitCompletionStatus'] = habitCompletionStatus;
+    result['isOffline'] = isOffline;
 
     return result;
   }
 
+  @override
   Future<void> saveHabitsData({
     required Map<String, List<Habit>> habitsByDate,
     required Map<String, int> remainingSeconds,
@@ -80,6 +104,7 @@ class FirestoreHabitStorage {
     await batch.commit();
   }
 
+  @override
   Future<void> upsertHabit(
     Habit habit, {
     required int durationSeconds,
@@ -99,6 +124,7 @@ class FirestoreHabitStorage {
     });
   }
 
+  @override
   Future<void> updateHabitProgress(
     String habitId, {
     required int remainingSeconds,
@@ -110,9 +136,28 @@ class FirestoreHabitStorage {
     });
   }
 
+  @override
   Future<void> deleteHabitsByUniqueId(String uniqueHabitId) async {
-    final snapshot =
-        await _habitsRef.where('uniqueHabitId', isEqualTo: uniqueHabitId).get();
+    QuerySnapshot<Map<String, dynamic>> snapshot;
+    try {
+      snapshot = await _habitsRef
+          .where('uniqueHabitId', isEqualTo: uniqueHabitId)
+          .get()
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => _habitsRef
+                .where('uniqueHabitId', isEqualTo: uniqueHabitId)
+                .get(const GetOptions(source: Source.cache)),
+          );
+    } catch (e) {
+      try {
+        snapshot = await _habitsRef
+            .where('uniqueHabitId', isEqualTo: uniqueHabitId)
+            .get(const GetOptions(source: Source.cache));
+      } catch (cacheError) {
+        return;
+      }
+    }
     final batch = FirebaseFirestore.instance.batch();
     for (final doc in snapshot.docs) {
       batch.delete(doc.reference);
@@ -120,14 +165,33 @@ class FirestoreHabitStorage {
     await batch.commit();
   }
 
+  @override
   Future<void> updateHabitNameAndDuration(
     String uniqueHabitId, {
     required String name,
     required int durationMinutes,
     required int durationSeconds,
   }) async {
-    final snapshot =
-        await _habitsRef.where('uniqueHabitId', isEqualTo: uniqueHabitId).get();
+    QuerySnapshot<Map<String, dynamic>> snapshot;
+    try {
+      snapshot = await _habitsRef
+          .where('uniqueHabitId', isEqualTo: uniqueHabitId)
+          .get()
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => _habitsRef
+                .where('uniqueHabitId', isEqualTo: uniqueHabitId)
+                .get(const GetOptions(source: Source.cache)),
+          );
+    } catch (e) {
+      try {
+        snapshot = await _habitsRef
+            .where('uniqueHabitId', isEqualTo: uniqueHabitId)
+            .get(const GetOptions(source: Source.cache));
+      } catch (cacheError) {
+        return;
+      }
+    }
     final batch = FirebaseFirestore.instance.batch();
     for (final doc in snapshot.docs) {
       final isCompleted = doc.data()['isCompleted'] as bool? ?? false;

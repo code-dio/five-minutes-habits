@@ -2235,36 +2235,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   : ReorderableListView(
                     padding: const EdgeInsets.all(8),
                     onReorder: _reorderHabits,
+                    buildDefaultDragHandles: false,
                     children: [
-                      for (final habit in _currentHabits)
+                      for (int i = 0; i < _currentHabits.length; i++)
                         HabitCard(
-                          key: ValueKey(habit.id),
-                          habit: habit,
-                          timerController: _ensureTimerController(habit.id),
-                          remainingSeconds: _ensureRemainingSeconds(habit),
-                          totalDuration: _ensureTotalDuration(habit),
-                          isCompleted: _habitCompletionStatus[habit.id] ?? false,
+                          key: ValueKey(_currentHabits[i].id),
+                          index: i,
+                          habit: _currentHabits[i],
+                          timerController: _ensureTimerController(_currentHabits[i].id),
+                          remainingSeconds: _ensureRemainingSeconds(_currentHabits[i]),
+                          totalDuration: _ensureTotalDuration(_currentHabits[i]),
+                          isCompleted: _habitCompletionStatus[_currentHabits[i].id] ?? false,
                           onTimeUpdate: (seconds) {
                             setState(() {
-                              _remainingSeconds[habit.id] = seconds;
+                              _remainingSeconds[_currentHabits[i].id] = seconds;
                             });
                           },
                           onCompletionChanged: (isCompleted) {
                             setState(() {
-                              _habitCompletionStatus[habit.id] = isCompleted;
+                              _habitCompletionStatus[_currentHabits[i].id] = isCompleted;
                             });
                             _storage.updateHabitProgress(
-                              habit.id,
-                              remainingSeconds: _remainingSeconds[habit.id] ?? 0,
+                              _currentHabits[i].id,
+                              remainingSeconds: _remainingSeconds[_currentHabits[i].id] ?? 0,
                               isCompleted: isCompleted,
                             );
                           },
-                          onTap: () => _showHabitStats(habit),
+                          onTap: () => _showHabitStats(_currentHabits[i]),
                           onLongPress:
                               () => _showHabitOptionsDialog(
-                                habit.id,
-                                habit.name,
-                                habit.durationMinutes,
+                                _currentHabits[i].id,
+                                _currentHabits[i].name,
+                                _currentHabits[i].durationMinutes,
                               ),
                         ),
                     ],
@@ -2547,6 +2549,7 @@ class TimerController {
 }
 
 class HabitCard extends StatefulWidget {
+  final int index;
   final Habit habit;
   final TimerController timerController;
   final int remainingSeconds;
@@ -2559,6 +2562,7 @@ class HabitCard extends StatefulWidget {
 
   const HabitCard({
     super.key,
+    required this.index,
     required this.habit,
     required this.timerController,
     required this.remainingSeconds,
@@ -3085,14 +3089,17 @@ class _HabitCardState extends State<HabitCard> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    GestureDetector(
-                      onTapDown: (_) {
-                        HapticFeedback.mediumImpact();
-                      },
-                      child: Icon(
-                        Icons.drag_indicator,
-                        color: Colors.grey[400],
-                        size: 22,
+                    ReorderableDragStartListener(
+                      index: widget.index,
+                      child: GestureDetector(
+                        onTapDown: (_) {
+                          HapticFeedback.mediumImpact();
+                        },
+                        child: Icon(
+                          Icons.drag_handle,
+                          color: Colors.grey[400],
+                          size: 22,
+                        ),
                       ),
                     ),
                   ],
